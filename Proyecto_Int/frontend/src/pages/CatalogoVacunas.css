@@ -1,0 +1,25 @@
+.catalogo-vacunas {
+  padding: 16px;
+}
+
+.vacunas-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.vacuna-item {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #f9f9f9;
+  width: calc(33.333% - 16px);
+}
+
+.vacuna-item h2 {
+  margin: 0 0 8px;
+}
+
+.vacuna-item p {
+  margin: 4px 0;
+}

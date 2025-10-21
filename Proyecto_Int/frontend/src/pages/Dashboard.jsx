@@ -1,62 +1,120 @@
 import './Dashboard.css'
 import SummaryCard from '../components/SummaryCard'
-import DoctorCard from '../components/DoctorCard'
 import ReservationModal from '../components/ReservationModal'
-import PetHistory from '../components/PetHistory'
-import { useState } from 'react'
-
-const sampleDoctors = [
-  { id: 1, name: 'Dra. Ana Pérez', specialty: 'Medicina General', photo: null },
-  { id: 2, name: 'Dr. Luis Gómez', specialty: 'Cirugía', photo: null },
-  { id: 3, name: 'Dra. Carla Ruiz', specialty: 'Dermatología', photo: null },
-]
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabaseClient'
 
 const Dashboard = ({ user }) => {
+  const navigate = useNavigate()
   const [showReserve, setShowReserve] = useState(false)
-  const [selectedPet, setSelectedPet] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    mascotas: 0,
+    reservas: 0,
+    compras: 0,
+    ultimaVisita: null
+  })
+  const [mascotas, setMascotas] = useState([])
 
-  // sample stats (in real app fetch from backend)
-  const stats = {
-    clientes: 124,
-    productos: 58,
-    servicios: 12,
-    reservasHoy: 6,
+  const checkAuth = useCallback(async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    if (!authUser) {
+      navigate('/iniciar-sesion')
+    }
+  }, [navigate])
+
+  const fetchDashboardData = useCallback(async () => {
+    if (!user) return
+    try {
+      // Fetch mascotas
+      const mascotasRes = await fetch(`${import.meta.env.VITE_API_URL}/api/mascotas/${user.id}`)
+      const mascotasData = await mascotasRes.json()
+      const mascotasList = mascotasData.mascotas || []
+      setMascotas(mascotasList)
+
+      setStats({
+        mascotas: mascotasList.length,
+        reservas: 0,
+        compras: 0,
+        ultimaVisita: null
+      })
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData()
+    } else {
+      checkAuth()
+    }
+  }, [user, fetchDashboardData, checkAuth])
+
+  if (loading) {
+    return <div className="dashboard-loading">Cargando dashboard...</div>
   }
 
   return (
     <div className="dashboard">
       <div className="dashboard-header">
         <h1>Dashboard</h1>
-        <p className="subtitle">Resumen de la clínica y accesos rápidos</p>
+        <p className="subtitle">Bienvenido {user?.email || 'Usuario'}</p>
       </div>
 
       <div className="summary-row">
-        <SummaryCard title="Clientes" value={stats.clientes} />
-        <SummaryCard title="Productos" value={stats.productos} />
-        <SummaryCard title="Servicios" value={stats.servicios} />
-        <SummaryCard title="Reservas hoy" value={stats.reservasHoy} />
+        <SummaryCard title="Mis Mascotas" value={stats.mascotas} />
+        <SummaryCard title="Reservas Activas" value={stats.reservas} />
+        <SummaryCard title="Compras" value={stats.compras} />
+        <SummaryCard title="Última Visita" value={stats.ultimaVisita || '-'} />
       </div>
 
       <section className="section">
-        <h2>Equipo médico</h2>
-        <div className="doctors-row">
-          {sampleDoctors.map((d) => (
-            <DoctorCard key={d.id} doctor={d} onReserve={() => setShowReserve(true)} />
-          ))}
+        <h2>Accesos Rápidos</h2>
+        <div className="quick-actions">
+          <button className="action-card" onClick={() => navigate('/mascotas')}>
+            <span className="icon">🐾</span>
+            <span>Mis Mascotas</span>
+          </button>
+          <button className="action-card" onClick={() => navigate('/reservas')}>
+            <span className="icon">📅</span>
+            <span>Nueva Reserva</span>
+          </button>
+          <button className="action-card" onClick={() => navigate('/catalogo-productos')}>
+            <span className="icon">🛍️</span>
+            <span>Tienda</span>
+          </button>
+          <button className="action-card" onClick={() => navigate('/perfil')}>
+            <span className="icon">👤</span>
+            <span>Mi Perfil</span>
+          </button>
         </div>
       </section>
 
       <section className="section">
-        <h2>Reservas</h2>
-        <button className="btn-primary" onClick={() => setShowReserve(true)}>Nueva reserva</button>
-      </section>
-
-      <section className="section">
-        <h2>Historial de la mascota</h2>
-        {user ? (
-          <PetHistory userId={user.id} onSelectPet={(p) => setSelectedPet(p)} />
+        <h2>Mis Mascotas Registradas</h2>
+        {mascotas.length === 0 ? (
+          <p>No tienes mascotas registradas. <a href="/mascotas">Registra tu primera mascota</a></p>
         ) : (
-          <p>Inicia sesión para ver el historial de tus mascotas.</p>
+          <div className="mascotas-preview">
+            {mascotas.slice(0, 3).map((m) => (
+              <div key={m.ci_mascota} className="mascota-mini-card">
+                <div className="mascota-mini-icon">🐾</div>
+                <div>
+                  <h4>{m.nombre_mascota}</h4>
+                  <p>{m.especie} • {m.raza || 'Sin raza'}</p>
+                </div>
+              </div>
+            ))}
+            {mascotas.length > 3 && (
+              <button onClick={() => navigate('/mascotas')} className="see-more-btn">
+                Ver todas ({mascotas.length})
+              </button>
+            )}
+          </div>
         )}
       </section>
 

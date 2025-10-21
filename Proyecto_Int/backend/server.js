@@ -352,5 +352,115 @@ app.post('/api/chatbot/mensaje', async (req, res) => {
   }
 })
 
+// --- Endpoints para PERFIL DE USUARIO ---
+// GET /api/cliente/:userId -> obtener datos del cliente por user_id
+app.get('/api/cliente/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params
+    const { data, error } = await supabase
+      .from('cliente')
+      .select('*')
+      .eq('ci_cliente', userId)
+      .single()
+    
+    if (error) throw error
+    res.json({ cliente: data })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Error obteniendo perfil' })
+  }
+})
+
+// PUT /api/cliente/:userId -> actualizar datos del cliente
+app.put('/api/cliente/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params
+    const updates = req.body
+    
+    const { data, error } = await supabase
+      .from('cliente')
+      .update(updates)
+      .eq('ci_cliente', userId)
+    
+    if (error) throw error
+    res.json({ success: true, data })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Error actualizando perfil' })
+  }
+})
+
+// --- Endpoints para MASCOTAS ---
+// GET /api/mascotas/:userId -> obtener mascotas del usuario
+app.get('/api/mascotas/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params
+    const { data, error } = await supabase
+      .from('mascota')
+      .select('*')
+      .eq('ci_cliente', userId)
+    
+    if (error) throw error
+    res.json({ mascotas: data || [] })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Error obteniendo mascotas' })
+  }
+})
+
+// POST /api/mascotas -> registrar nueva mascota
+app.post('/api/mascotas', async (req, res) => {
+  try {
+    const mascotaData = req.body
+    const { data, error } = await supabase
+      .from('mascota')
+      .insert([mascotaData])
+      .select()
+    
+    if (error) throw error
+    res.status(201).json({ success: true, mascota: data[0] })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Error registrando mascota' })
+  }
+})
+
+// PUT /api/mascotas/:ci_mascota -> actualizar mascota
+app.put('/api/mascotas/:ci_mascota', async (req, res) => {
+  try {
+    const { ci_mascota } = req.params
+    const updates = req.body
+    
+    const { data, error } = await supabase
+      .from('mascota')
+      .update(updates)
+      .eq('ci_mascota', ci_mascota)
+    
+    if (error) throw error
+    res.json({ success: true, data })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Error actualizando mascota' })
+  }
+})
+
+// DELETE /api/mascotas/:ci_mascota -> eliminar mascota
+app.delete('/api/mascotas/:ci_mascota', async (req, res) => {
+  try {
+    const { ci_mascota } = req.params
+    
+    const { error } = await supabase
+      .from('mascota')
+      .delete()
+      .eq('ci_mascota', ci_mascota)
+    
+    if (error) throw error
+    res.json({ success: true })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Error eliminando mascota' })
+  }
+})
+
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => console.log(`Servidor corriendo en http://localhost:${PORT}`))

@@ -1,0 +1,24 @@
+.articulos-blog {
+  padding: 16px;
+}
+
+.articulos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.articulo-item {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #f9f9f9;
+}
+
+.articulo-item h2 {
+  margin: 0 0 8px;
+}
+
+.articulo-item p {
+  margin: 4px 0;
+}

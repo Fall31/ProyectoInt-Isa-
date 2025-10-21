@@ -6,7 +6,119 @@
   --accent-2: #ffd3b6; /* pastel peach */
 }
 
-.dashboard{padding:20px}
+.dashboard { padding: 20px }
+
+.dashboard-header { margin-bottom: 20px }
+.dashboard-header h1 { margin: 0 0 8px; color: #0b3d91 }
+.dashboard-header .subtitle { color: #64748b; margin: 0 }
+
+.dashboard-loading { text-align: center; padding: 40px; color: #64748b }
+
+.summary-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.section { margin-bottom: 32px }
+.section h2 { margin: 0 0 16px; color: #1e293b; font-size: 1.3rem }
+
+/* Quick Actions */
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+}
+
+.action-card {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border: none;
+  border-radius: 12px;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  font-weight: 600;
+  color: #0b3d91;
+}
+
+.action-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+.action-card .icon {
+  font-size: 2.5rem;
+}
+
+/* Mascotas Preview */
+.mascotas-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mascota-mini-card {
+  background: #fff;
+  padding: 16px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mascota-mini-icon {
+  font-size: 2rem;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.mascota-mini-card h4 {
+  margin: 0 0 4px;
+  color: #0b3d91;
+}
+
+.mascota-mini-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.see-more-btn {
+  background: #f1f5f9;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #475569;
+  transition: background 0.2s;
+}
+
+.see-more-btn:hover {
+  background: #e2e8f0;
+}
+
+@media (max-width: 768px) {
+  .summary-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .quick-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+}
 .dashboard-header h1{margin:0;color:#2b2b2b}
 .subtitle{color:var(--muted);margin-top:6px}
 .summary-row{display:flex;gap:12px;margin:18px 0}
