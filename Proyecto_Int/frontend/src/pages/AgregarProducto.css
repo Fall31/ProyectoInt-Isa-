@@ -1,0 +1,56 @@
+.agregar-container {
+  max-width: 500px;
+  margin: 50px auto;
+  padding: 25px;
+  border-radius: 12px;
+  background-color: #1e1e2f;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+.agregar-container h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.agregar-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.agregar-form input,
+.agregar-form textarea {
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+  font-size: 1rem;
+}
+
+.agregar-form button {
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  background-color: #00bfa6;
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.agregar-form button:hover {
+  background-color: #009f8a;
+}
+
+.preview {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.preview img {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #00bfa6;
+}

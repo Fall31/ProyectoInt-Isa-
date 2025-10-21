@@ -1,0 +1,15 @@
+:root{
+  --bg: #fbfbff;
+  --card: #fff;
+  --muted: #6b6f76;
+  --accent: #9ad3bc; /* pastel green */
+  --accent-2: #ffd3b6; /* pastel peach */
+}
+
+.dashboard{padding:20px}
+.dashboard-header h1{margin:0;color:#2b2b2b}
+.subtitle{color:var(--muted);margin-top:6px}
+.summary-row{display:flex;gap:12px;margin:18px 0}
+.section{margin-top:24px}
+.doctors-row{display:flex;gap:12px;overflow:auto;padding-bottom:8px}
+.btn-primary{background:var(--accent);border:none;padding:8px 14px;border-radius:8px;color:#fff}

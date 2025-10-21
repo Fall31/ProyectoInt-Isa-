@@ -1,0 +1,11 @@
+.chatbot{position:fixed;right:18px;bottom:18px;font-family:inherit;z-index:1200}
+.chat-toggle{background:var(--mid-blue);color:white;padding:10px 14px;border-radius:999px;cursor:pointer}
+.chatbot .chat-panel{width:320px;height:420px;background:var(--soft-white);border-radius:12px;box-shadow:0 10px 30px rgba(22,35,60,0.12);margin-top:8px;display:flex;flex-direction:column;overflow:hidden;transform:translateY(10px);opacity:0;pointer-events:none}
+.chatbot.open .chat-panel{transform:none;opacity:1;pointer-events:all}
+.chat-messages{flex:1;padding:12px;overflow:auto;display:flex;flex-direction:column;gap:8px}
+.msg{padding:8px 10px;border-radius:10px;max-width:78%}
+.msg.bot{background:var(--soft-cyan);align-self:flex-start}
+.msg.user{background:var(--soft-lilac);align-self:flex-end}
+.chat-controls{display:flex;padding:8px;gap:8px;border-top:1px solid #eee}
+.chat-controls input{flex:1;padding:8px;border-radius:8px;border:1px solid #ddd}
+.btn-primary{background:var(--mid-blue);border:none;padding:8px 12px;border-radius:8px;color:white}

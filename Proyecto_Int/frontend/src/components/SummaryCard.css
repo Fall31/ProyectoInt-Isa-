@@ -1,0 +1,3 @@
+.summary-card{background:linear-gradient(135deg,var(--accent) 0%, var(--accent-2) 100%);padding:16px;border-radius:12px;color:#fff;flex:1;min-width:120px}
+.summary-title{font-size:14px;opacity:0.9}
+.summary-value{font-size:22px;font-weight:700;margin-top:6px}

@@ -1,0 +1,16 @@
+:root{
+  --bg: #f8fafb;
+  --card: #fff;
+  --accent-3:#e6f7ff; /* pastel blue */
+  --muted:#6b7280;
+}
+
+.doctores-page{padding:20px;background:var(--bg)}
+.doctors-grid{display:grid;grid-template-columns:1fr;gap:14px;margin-top:14px}
+.doctor-card-page{display:flex;gap:12px;align-items:center;padding:12px;border-radius:12px;background:linear-gradient(90deg,var(--card),var(--accent-3));box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+.avatar-large{width:64px;height:64px;border-radius:50%;background:#fddede;display:flex;align-items:center;justify-content:center;font-weight:700}
+.doctor-name{font-weight:700}
+.doctor-specialty{color:var(--muted);font-size:0.95rem}
+.doctor-bio{margin-top:6px;color:#374151}
+
+@media(min-width:800px){.doctors-grid{grid-template-columns:repeat(3,1fr)}}
