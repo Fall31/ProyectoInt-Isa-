@@ -239,57 +239,17 @@ app.post('/api/reservas', async (req, res) => {
 })
 
 // --- Endpoints para HISTORIAL MÉDICO ---
-app.get('/api/historial/:ci_cliente', async (req, res) => {
-  try {
-    const { ci_cliente } = req.params
-    const { data, error } = await supabase
-      .from('mascota')
-      .select(`
-        *,
-        historial_medico(
-          *,
-          historial_medico_detalle(
-            *,
-            diagnostico(descripcion),
-            servicio(nombre_servicio),
-            tratamiento(descripcion, medicamento)
-          )
-        )
-      `)
-      .eq('ci_cliente', ci_cliente)
-    if (error) throw error
-    res.json({ mascotas: data })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error obteniendo historial' })
-  }
-})
+const clienteController = require('./src/controllers/clienteController')
 
+// Delegar rutas de cliente al controller (separación de capas)
+app.post('/api/cliente', clienteController.createCliente)
+app.get('/api/cliente', clienteController.getClientes)
 // --- Endpoints para CHATBOT ---
-app.get('/api/chatbot/intents', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('chatbot_intent')
-      .select(`
-        *,
-        chatbot_respuesta(texto_respuesta)
-      `)
-    if (error) throw error
-    res.json({ intents: data })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error obteniendo intents' })
-  }
-})
-
 app.post('/api/chatbot/mensaje', async (req, res) => {
   try {
     const { ci_cliente, texto_mensaje } = req.body
-    
-    // Buscar intent basado en palabras clave simples
     let intent_id = null
-    const texto = texto_mensaje.toLowerCase()
-    
+    const texto = (texto_mensaje || '').toLowerCase()
     if (texto.includes('reserva') || texto.includes('cita')) {
       intent_id = 1 // asumiendo que intent 1 es para reservas
     } else if (texto.includes('precio') || texto.includes('costo')) {
