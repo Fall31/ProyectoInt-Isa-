@@ -36,10 +36,18 @@ if (process.env.USE_MOCK === 'true' || !hasSupabaseCreds) {
   reservaRepository = require('./repositories/reservaRepository')
 }
 
+let carritoRepository
+if (process.env.USE_MOCK === 'true' || !hasSupabaseCreds) {
+  carritoRepository = require('./frameworks/mockCarritoAdapter')
+} else {
+  carritoRepository = require('./repositories/carritoRepository')
+}
+
 module.exports = {
   clienteRepository,
   productoRepository,
   servicioRepository,
   mascotaRepository,
   reservaRepository,
+  carritoRepository,
 }

@@ -80,74 +80,9 @@ const servicioController = require('./src/controllers/servicioController')
 app.get('/api/servicios', servicioController.listServicios)
 
 // --- Endpoints para CARRITO ---
-app.get('/api/carrito/:ci_cliente', async (req, res) => {
-  try {
-    const { ci_cliente } = req.params
-    const { data, error } = await supabase
-      .from('carrito')
-      .select(`
-        *,
-        detalle_carrito(
-          *,
-          producto(nombre_producto, precio, imagen)
-        )
-      `)
-      .eq('ci_cliente', ci_cliente)
-      .eq('estado', 'activo')
-    if (error) throw error
-    res.json({ carrito: data[0] || null })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error obteniendo carrito' })
-  }
-})
-
-app.post('/api/carrito/agregar', async (req, res) => {
-  try {
-    const { ci_cliente, id_producto, cantidad } = req.body
-    
-    // Buscar carrito activo del cliente
-    let { data: carrito, error } = await supabase
-      .from('carrito')
-      .select('*')
-      .eq('ci_cliente', ci_cliente)
-      .eq('estado', 'activo')
-      .single()
-    
-    // Si no existe carrito, crear uno
-    if (!carrito) {
-      const { data: nuevoCarrito, error: errorCarrito } = await supabase
-        .from('carrito')
-        .insert([{ ci_cliente, estado: 'activo' }])
-        .select()
-        .single()
-      if (errorCarrito) throw errorCarrito
-      carrito = nuevoCarrito
-    }
-    
-    // Agregar producto al carrito
-    const { data: producto } = await supabase
-      .from('producto')
-      .select('precio')
-      .eq('id_producto', id_producto)
-      .single()
-    
-    const { data, error: errorDetalle } = await supabase
-      .from('detalle_carrito')
-      .insert([{
-        id_carrito: carrito.id_carrito,
-        id_producto,
-        cantidad,
-        precio_unitario: producto.precio
-      }])
-    
-    if (errorDetalle) throw errorDetalle
-    res.json({ success: true })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error agregando al carrito' })
-  }
-})
+const carritoController = require('./src/controllers/carritoController')
+app.get('/api/carrito/:ci_cliente', carritoController.getCarrito)
+app.post('/api/carrito/agregar', carritoController.agregarProducto)
 
 // --- Endpoints para DOCTORES (Personal) ---
 app.get('/api/doctores', async (req, res) => {
