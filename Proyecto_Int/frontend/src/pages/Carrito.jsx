@@ -1,19 +1,30 @@
 import React, { useEffect, useState } from 'react'
+import { useCarrito } from '@/hooks'
+import { Producto } from '@/domain'
 import './Carrito.css'
 
 const Carrito = () => {
+  const { obtenerCarritoLocal, limpiarCarrito } = useCarrito()
   const [items, setItems] = useState([])
 
   useEffect(() => {
-    const saved = window.localStorage.getItem('carrito')
-    if (saved) setItems(JSON.parse(saved))
-  }, [])
+    const loadItems = () => {
+      const carritoItems = obtenerCarritoLocal()
+      setItems(carritoItems)
+    }
+    loadItems()
+  }, [obtenerCarritoLocal])
 
   const total = items.reduce((s, it) => s + (it.precio * it.cantidad), 0)
 
-  const clear = () => {
+  const handleVaciar = () => {
+    limpiarCarrito()
     setItems([])
-    window.localStorage.removeItem('carrito')
+  }
+
+  const handlePagar = () => {
+    // TODO: Implementar proceso de pago
+    alert(`Total a pagar: $${total.toFixed(2)}`)
   }
 
   return (
@@ -27,12 +38,13 @@ const Carrito = () => {
             <div key={idx} className="carrito-item">
               <div>{it.nombre}</div>
               <div>{it.cantidad} x ${it.precio.toFixed(2)}</div>
+              <div className="subtotal">${(it.cantidad * it.precio).toFixed(2)}</div>
             </div>
           ))}
           <div className="carrito-total">Total: ${total.toFixed(2)}</div>
           <div className="carrito-actions">
-            <button className="btn-primary">Pagar</button>
-            <button className="btn-muted" onClick={clear}>Vaciar</button>
+            <button className="btn-primary" onClick={handlePagar}>Pagar</button>
+            <button className="btn-muted" onClick={handleVaciar}>Vaciar</button>
           </div>
         </div>
       )}

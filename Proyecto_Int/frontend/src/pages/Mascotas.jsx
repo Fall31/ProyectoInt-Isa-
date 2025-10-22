@@ -1,15 +1,14 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabaseClient';
-import './Mascotas.css';
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useMascotasAuth } from '@/hooks'
+import { Mascota } from '@/domain'
+import './Mascotas.css'
 
 const Mascotas = () => {
-  const navigate = useNavigate();
-  const [user, setUser] = useState(null);
-  const [mascotas, setMascotas] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingMascota, setEditingMascota] = useState(null);
+  const navigate = useNavigate()
+  const { mascotas, loading, createMascota, updateMascota, deleteMascota } = useMascotasAuth()
+  const [showForm, setShowForm] = useState(false)
+  const [editingMascota, setEditingMascota] = useState(null)
   
   const [formData, setFormData] = useState({
     nombre_mascota: '',
@@ -19,83 +18,34 @@ const Mascotas = () => {
     peso: '',
     genero_mascota: '',
     alergias: ''
-  });
-
-  useEffect(() => {
-    checkAuthAndFetchMascotas();
-  }, []);
-
-  const checkAuthAndFetchMascotas = async () => {
-    try {
-      const { data: { user: authUser }, error } = await supabase.auth.getUser();
-      
-      if (error || !authUser) {
-        navigate('/iniciar-sesion');
-        return;
-      }
-
-      setUser(authUser);
-      await fetchMascotas(authUser.id);
-    } catch (error) {
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchMascotas = async (userId) => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/mascotas/${userId}`);
-      const data = await response.json();
-      setMascotas(data.mascotas || []);
-    } catch (error) {
-      console.error('Error fetching mascotas:', error);
-    }
-  };
+  })
 
   const handleInputChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
-    });
-  };
+    })
+  }
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
     
-    const url = editingMascota
-      ? `${import.meta.env.VITE_API_URL}/api/mascotas/${editingMascota.ci_mascota}`
-      : `${import.meta.env.VITE_API_URL}/api/mascotas`;
-    
-    const method = editingMascota ? 'PUT' : 'POST';
+    const result = editingMascota
+      ? await updateMascota(editingMascota.ci_mascota, formData)
+      : await createMascota(formData)
 
-    try {
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          ci_cliente: user.id
-        })
-      });
-
-      if (response.ok) {
-        alert(editingMascota ? 'Mascota actualizada' : 'Mascota registrada correctamente');
-        setShowForm(false);
-        setEditingMascota(null);
-        resetForm();
-        fetchMascotas(user.id);
-      } else {
-        alert('Error al guardar la mascota');
-      }
-    } catch (error) {
-      console.error('Error saving mascota:', error);
-      alert('Error al guardar la mascota');
+    if (result.success) {
+      alert(editingMascota ? 'Mascota actualizada' : 'Mascota registrada correctamente')
+      setShowForm(false)
+      setEditingMascota(null)
+      resetForm()
+    } else {
+      alert('Error: ' + result.error)
     }
-  };
+  }
 
   const handleEdit = (mascota) => {
-    setEditingMascota(mascota);
+    setEditingMascota(mascota)
     setFormData({
       nombre_mascota: mascota.nombre_mascota,
       especie: mascota.especie,
@@ -104,29 +54,20 @@ const Mascotas = () => {
       peso: mascota.peso,
       genero_mascota: mascota.genero_mascota,
       alergias: mascota.alergias || ''
-    });
-    setShowForm(true);
-  };
+    })
+    setShowForm(true)
+  }
 
   const handleDelete = async (ci_mascota) => {
-    if (!confirm('¿Estás seguro de eliminar esta mascota?')) return;
+    if (!confirm('¿Estás seguro de eliminar esta mascota?')) return
 
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/mascotas/${ci_mascota}`,
-        { method: 'DELETE' }
-      );
-
-      if (response.ok) {
-        alert('Mascota eliminada');
-        fetchMascotas(user.id);
-      } else {
-        alert('Error al eliminar');
-      }
-    } catch (error) {
-      console.error('Error deleting:', error);
+    const result = await deleteMascota(ci_mascota)
+    if (result.success) {
+      alert('Mascota eliminada')
+    } else {
+      alert('Error al eliminar: ' + result.error)
     }
-  };
+  }
 
   const resetForm = () => {
     setFormData({
@@ -137,17 +78,17 @@ const Mascotas = () => {
       peso: '',
       genero_mascota: '',
       alergias: ''
-    });
-  };
+    })
+  }
 
   const handleCancel = () => {
-    setShowForm(false);
-    setEditingMascota(null);
-    resetForm();
-  };
+    setShowForm(false)
+    setEditingMascota(null)
+    resetForm()
+  }
 
   if (loading) {
-    return <div className="mascotas-loading">Cargando mascotas...</div>;
+    return <div className="mascotas-loading">Cargando mascotas...</div>
   }
 
   return (
@@ -281,44 +222,48 @@ const Mascotas = () => {
             </button>
           </div>
         ) : (
-          mascotas.map((mascota) => (
-            <div key={mascota.ci_mascota} className="mascota-card">
-              <div className="mascota-image">
-                {mascota.imagen ? (
-                  <img src={mascota.imagen} alt={mascota.nombre_mascota} />
-                ) : (
-                  <div className="placeholder-image">🐾</div>
-                )}
-              </div>
-              <div className="mascota-info">
-                <h3>{mascota.nombre_mascota}</h3>
-                <p className="mascota-species">{mascota.especie} • {mascota.raza || 'Sin raza'}</p>
-                <div className="mascota-details">
-                  <span>Edad: {mascota.edad} años</span>
-                  <span>Peso: {mascota.peso} kg</span>
-                  <span>Género: {mascota.genero_mascota === 'M' ? 'Macho' : 'Hembra'}</span>
+          mascotas.map((mascota) => {
+            const mascotaModel = mascota instanceof Mascota ? mascota : Mascota.fromAPI(mascota)
+            
+            return (
+              <div key={mascotaModel.ci_mascota} className="mascota-card">
+                <div className="mascota-image">
+                  {mascotaModel.imagen ? (
+                    <img src={mascotaModel.imagen} alt={mascotaModel.nombre_mascota} />
+                  ) : (
+                    <div className="placeholder-image">🐾</div>
+                  )}
                 </div>
-                {mascota.alergias && (
-                  <p className="mascota-allergies">⚠️ {mascota.alergias}</p>
-                )}
+                <div className="mascota-info">
+                  <h3>{mascotaModel.nombre_mascota}</h3>
+                  <p className="mascota-species">{mascotaModel.especie} • {mascotaModel.raza || 'Sin raza'}</p>
+                  <div className="mascota-details">
+                    <span>Edad: {mascotaModel.edad} años {mascotaModel.esAdulta() ? '(Adulta)' : ''}</span>
+                    <span>Peso: {mascotaModel.peso} kg</span>
+                    <span>Género: {mascotaModel.genero_mascota === 'M' ? 'Macho' : 'Hembra'}</span>
+                  </div>
+                  {mascotaModel.alergias && (
+                    <p className="mascota-allergies">⚠️ {mascotaModel.alergias}</p>
+                  )}
+                </div>
+                <div className="mascota-actions">
+                  <button onClick={() => handleEdit(mascota)} className="btn-edit">
+                    Editar
+                  </button>
+                  <button onClick={() => navigate(`/historial/${mascotaModel.ci_mascota}`)} className="btn-history">
+                    Historial
+                  </button>
+                  <button onClick={() => handleDelete(mascotaModel.ci_mascota)} className="btn-delete">
+                    Eliminar
+                  </button>
+                </div>
               </div>
-              <div className="mascota-actions">
-                <button onClick={() => handleEdit(mascota)} className="btn-edit">
-                  Editar
-                </button>
-                <button onClick={() => navigate(`/historial/${mascota.ci_mascota}`)} className="btn-history">
-                  Historial
-                </button>
-                <button onClick={() => handleDelete(mascota.ci_mascota)} className="btn-delete">
-                  Eliminar
-                </button>
-              </div>
-            </div>
-          ))
+            )
+          })
         )}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Mascotas;
+export default Mascotas

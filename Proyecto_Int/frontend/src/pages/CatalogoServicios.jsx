@@ -1,33 +1,12 @@
-import React, { useEffect, useState } from 'react'
-import { serviciosAPI } from '../lib/api'
+import React from 'react'
+import { useServicios } from '@/hooks'
+import { Servicio } from '@/domain'
 import './CatalogoServicios.css'
 
 const CatalogoServicios = () => {
-  const [servicios, setServicios] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const loadServicios = async () => {
-      try {
-        const data = await serviciosAPI.getAll()
-        setServicios(data.servicios || [])
-      } catch (error) {
-        console.error('Error cargando servicios:', error)
-        // Fallback a datos estáticos
-        setServicios([
-          { id_servicio: 1, nombre_servicio: 'Consulta general', precio_base: 20.00, duracion: 30, descripcion: 'Examen médico completo' },
-          { id_servicio: 2, nombre_servicio: 'Vacunación', precio_base: 15.00, duracion: 15, descripcion: 'Aplicación de vacunas' },
-          { id_servicio: 3, nombre_servicio: 'Corte de pelo', precio_base: 30.00, duracion: 60, descripcion: 'Grooming profesional' },
-        ])
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadServicios()
-  }, [])
+  const { servicios, loading, error } = useServicios()
 
   const abrirReserva = (servicio) => {
-    // Redirigir a página de reservas con el servicio preseleccionado
     window.location.href = `/reservas?servicio=${servicio.id_servicio}`
   }
 
@@ -35,6 +14,14 @@ const CatalogoServicios = () => {
     return (
       <div className="catalogo-servicios">
         <div className="loading-spinner">Cargando servicios...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="catalogo-servicios">
+        <div className="error-message">Error: {error}</div>
       </div>
     )
   }
@@ -47,31 +34,37 @@ const CatalogoServicios = () => {
       </div>
       
       <div className="services-grid">
-        {servicios.map(s => (
-          <div key={s.id_servicio} className="service-card">
-            <div className="service-icon">🏥</div>
-            <div className="service-info">
-              <h3>{s.nombre_servicio}</h3>
-              {s.descripcion && <p className="service-desc">{s.descripcion}</p>}
-              <div className="service-details">
-                <span className="duracion">⏱️ {s.duracion} min</span>
-                <span className="categoria">{s.categoria || 'General'}</span>
-              </div>
-              <div className="service-footer">
-                <div className="pricing">
-                  <span className="price-label">Desde</span>
-                  <span className="price">${s.precio_base.toFixed(2)}</span>
+        {servicios.map(s => {
+          const servicio = s instanceof Servicio ? s : Servicio.fromAPI(s)
+          
+          return (
+            <div key={servicio.id_servicio} className="service-card">
+              <div className="service-icon">🏥</div>
+              <div className="service-info">
+                <h3>{servicio.nombre_servicio}</h3>
+                {servicio.descripcion && <p className="service-desc">{servicio.descripcion}</p>}
+                <div className="service-details">
+                  <span className="duracion">⏱️ {servicio.duracion} min</span>
+                  <span className="categoria">{servicio.categoria || 'General'}</span>
+                  {servicio.estaDisponible() && <span className="badge-disponible">✓ Disponible</span>}
                 </div>
-                <button 
-                  className="btn-secondary"
-                  onClick={() => abrirReserva(s)}
-                >
-                  Reservar
-                </button>
+                <div className="service-footer">
+                  <div className="pricing">
+                    <span className="price-label">Desde</span>
+                    <span className="price">${servicio.precio_base.toFixed(2)}</span>
+                  </div>
+                  <button 
+                    className="btn-secondary"
+                    onClick={() => abrirReserva(servicio)}
+                    disabled={!servicio.estaDisponible()}
+                  >
+                    Reservar
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
