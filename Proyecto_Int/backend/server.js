@@ -172,48 +172,9 @@ app.get('/api/doctores', async (req, res) => {
 })
 
 // --- Endpoints para RESERVAS ---
-app.get('/api/reservas/:ci_cliente', async (req, res) => {
-  try {
-    const { ci_cliente } = req.params
-    const { data, error } = await supabase
-      .from('reserva')
-      .select(`
-        *,
-        servicio(nombre_servicio, precio_base),
-        mascota(nombre_mascota, especie)
-      `)
-      .eq('mascota.ci_cliente', ci_cliente)
-      .order('fecha_reserva', { ascending: false })
-      .limit(20)
-    if (error) throw error
-    res.json({ reservas: data })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error obteniendo reservas' })
-  }
-})
-
-app.post('/api/reservas', async (req, res) => {
-  try {
-    const { ci_mascota, id_servicio, fecha_reserva, hora_reserva, comentarios } = req.body
-    const { data, error } = await supabase
-      .from('reserva')
-      .insert([{
-        ci_mascota,
-        id_servicio,
-        fecha_reserva,
-        hora_reserva,
-        estado_reserva: 'pendiente',
-        comentarios,
-        tipo_reserva: 'cita'
-      }])
-    if (error) throw error
-    res.json({ success: true, reserva: data })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error creando reserva' })
-  }
-})
+const reservaController = require('./src/controllers/reservaController')
+app.get('/api/reservas/:ci_cliente', reservaController.getReservasByCliente)
+app.post('/api/reservas', reservaController.createReserva)
 
 // --- Endpoints para HISTORIAL MÉDICO ---
 const clienteController = require('./src/controllers/clienteController')
