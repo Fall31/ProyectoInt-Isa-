@@ -76,20 +76,8 @@ const productoController = require('./src/controllers/productoController')
 app.get('/api/productos', productoController.listProductos)
 
 // --- Endpoints para SERVICIOS ---
-app.get('/api/servicios', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('servicio')
-      .select('*')
-      .eq('estado_servicio', 'activo')
-      .limit(50)
-    if (error) throw error
-    res.json({ servicios: data })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error obteniendo servicios' })
-  }
-})
+const servicioController = require('./src/controllers/servicioController')
+app.get('/api/servicios', servicioController.listServicios)
 
 // --- Endpoints para CARRITO ---
 app.get('/api/carrito/:ci_cliente', async (req, res) => {
