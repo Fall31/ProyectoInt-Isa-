@@ -1,15 +1,10 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabaseClient';
-import './Perfil.css';
+import { useState, useEffect } from 'react'
+import { usePerfil } from '@/hooks'
+import './Perfil.css'
 
 const Perfil = () => {
-  const navigate = useNavigate();
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const { user, perfil, loading, saving, updatePerfil, changePassword } = usePerfil()
   
-  // Form data
   const [formData, setFormData] = useState({
     nombre_cliente: '',
     primer_apellido: '',
@@ -17,121 +12,74 @@ const Perfil = () => {
     telefono_cliente: '',
     nit: '',
     genero: ''
-  });
+  })
 
-  // Password change
   const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
     newPassword: '',
     confirmPassword: ''
-  });
+  })
 
   useEffect(() => {
-    fetchUserProfile();
-  }, []);
-
-  const fetchUserProfile = async () => {
-    try {
-      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !authUser) {
-        navigate('/iniciar-sesion');
-        return;
-      }
-
-      setUser(authUser);
-
-      // Fetch cliente data from backend
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/cliente/${authUser.id}`);
-      const data = await response.json();
-      
-      if (data.cliente) {
-        setFormData({
-          nombre_cliente: data.cliente.nombre_cliente || '',
-          primer_apellido: data.cliente.primer_apellido || '',
-          direccion: data.cliente.direccion || '',
-          telefono_cliente: data.cliente.telefono_cliente || '',
-          nit: data.cliente.nit || '',
-          genero: data.cliente.genero || ''
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    } finally {
-      setLoading(false);
+    if (perfil) {
+      setFormData({
+        nombre_cliente: perfil.nombre_cliente || '',
+        primer_apellido: perfil.primer_apellido || '',
+        direccion: perfil.direccion || '',
+        telefono_cliente: perfil.telefono_cliente || '',
+        nit: perfil.nit || '',
+        genero: perfil.genero || ''
+      })
     }
-  };
+  }, [perfil])
 
   const handleInputChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
-    });
-  };
+    })
+  }
 
   const handlePasswordChange = (e) => {
     setPasswordData({
       ...passwordData,
       [e.target.name]: e.target.value
-    });
-  };
+    })
+  }
 
   const handleSaveProfile = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/cliente/${user.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-
-      if (response.ok) {
-        alert('Perfil actualizado correctamente');
-      } else {
-        alert('Error al actualizar el perfil');
-      }
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      alert('Error al guardar los cambios');
-    } finally {
-      setSaving(false);
+    e.preventDefault()
+    const result = await updatePerfil(formData)
+    if (result.success) {
+      alert('Perfil actualizado correctamente')
+    } else {
+      alert('Error al actualizar el perfil: ' + result.error)
     }
-  };
+  }
 
   const handleChangePassword = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert('Las contraseñas no coinciden');
-      return;
+      alert('Las contraseñas no coinciden')
+      return
     }
 
     if (passwordData.newPassword.length < 6) {
-      alert('La contraseña debe tener al menos 6 caracteres');
-      return;
+      alert('La contraseña debe tener al menos 6 caracteres')
+      return
     }
 
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: passwordData.newPassword
-      });
-
-      if (error) {
-        alert('Error al cambiar la contraseña: ' + error.message);
-      } else {
-        alert('Contraseña actualizada correctamente');
-        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      }
-    } catch (error) {
-      console.error('Error changing password:', error);
-      alert('Error al cambiar la contraseña');
+    const result = await changePassword(passwordData.newPassword)
+    if (result.success) {
+      alert('Contraseña actualizada correctamente')
+      setPasswordData({ newPassword: '', confirmPassword: '' })
+    } else {
+      alert('Error al cambiar la contraseña: ' + result.error)
     }
-  };
+  }
 
   if (loading) {
-    return <div className="perfil-loading">Cargando perfil...</div>;
+    return <div className="perfil-loading">Cargando perfil...</div>
   }
 
   return (
@@ -255,7 +203,7 @@ const Perfil = () => {
         </section>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Perfil;
+export default Perfil

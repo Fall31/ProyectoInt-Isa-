@@ -1,61 +1,21 @@
-import './Dashboard.css'
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useDashboard } from '@/hooks'
 import SummaryCard from '../components/SummaryCard'
 import ReservationModal from '../components/ReservationModal'
-import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabaseClient'
+import './Dashboard.css'
 
-const Dashboard = ({ user }) => {
+const Dashboard = () => {
   const navigate = useNavigate()
+  const { user, stats, mascotas, loading, error } = useDashboard()
   const [showReserve, setShowReserve] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState({
-    mascotas: 0,
-    reservas: 0,
-    compras: 0,
-    ultimaVisita: null
-  })
-  const [mascotas, setMascotas] = useState([])
-
-  const checkAuth = useCallback(async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    if (!authUser) {
-      navigate('/iniciar-sesion')
-    }
-  }, [navigate])
-
-  const fetchDashboardData = useCallback(async () => {
-    if (!user) return
-    try {
-      // Fetch mascotas
-      const mascotasRes = await fetch(`${import.meta.env.VITE_API_URL}/api/mascotas/${user.id}`)
-      const mascotasData = await mascotasRes.json()
-      const mascotasList = mascotasData.mascotas || []
-      setMascotas(mascotasList)
-
-      setStats({
-        mascotas: mascotasList.length,
-        reservas: 0,
-        compras: 0,
-        ultimaVisita: null
-      })
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [user])
-
-  useEffect(() => {
-    if (user) {
-      fetchDashboardData()
-    } else {
-      checkAuth()
-    }
-  }, [user, fetchDashboardData, checkAuth])
 
   if (loading) {
     return <div className="dashboard-loading">Cargando dashboard...</div>
+  }
+
+  if (error) {
+    return <div className="dashboard-error">Error: {error}</div>
   }
 
   return (
