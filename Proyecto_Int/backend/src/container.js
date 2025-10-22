@@ -22,8 +22,16 @@ if (process.env.USE_MOCK === 'true' || !hasSupabaseCreds) {
   servicioRepository = require('./repositories/servicioRepository')
 }
 
+let mascotaRepository
+if (process.env.USE_MOCK === 'true' || !hasSupabaseCreds) {
+  mascotaRepository = require('./frameworks/mockMascotaAdapter')
+} else {
+  mascotaRepository = require('./repositories/mascotaRepository')
+}
+
 module.exports = {
   clienteRepository,
   productoRepository,
   servicioRepository,
+  mascotaRepository,
 }
