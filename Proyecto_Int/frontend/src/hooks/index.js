@@ -4,3 +4,4 @@
 
 export { useProductos } from './useProductos'
 export { useMascotas } from './useMascotas'
+export { useCarrito } from './useCarrito'
