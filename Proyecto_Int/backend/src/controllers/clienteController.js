@@ -1,4 +1,8 @@
-const clienteRepo = require('../repositories/clienteRepository')
+const container = require('../../container')
+const { makeCreateCliente, makeListClientes } = require('../../usecases/clienteUsecases')
+
+const createClienteUsecase = makeCreateCliente({ clienteRepository: container.clienteRepository })
+const listClientesUsecase = makeListClientes({ clienteRepository: container.clienteRepository })
 
 async function createCliente(req, res) {
   try {
@@ -7,12 +11,11 @@ async function createCliente(req, res) {
       return res.status(400).json({ error: 'Body vacío. Enviar los datos a insertar.' })
     }
 
-    const { data, error } = await clienteRepo.insertCliente(payload)
-    if (error) {
-      console.error('Insert cliente error:', error)
-      return res.status(500).json({ error: error.message || 'Error interno' })
+    const result = await createClienteUsecase({ payload })
+    if (!result.success) {
+      return res.status(400).json({ error: result.errors || result.error })
     }
-    res.status(201).json({ inserted: data })
+    res.status(201).json({ inserted: result.data })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Error interno' })
@@ -21,12 +24,9 @@ async function createCliente(req, res) {
 
 async function getClientes(req, res) {
   try {
-    const { data, error } = await clienteRepo.listClientes(100)
-    if (error) {
-      console.error('List clientes error:', error)
-      return res.status(500).json({ error: error.message })
-    }
-    res.json({ clientes: data })
+    const result = await listClientesUsecase({ limit: 100 })
+    if (!result.success) return res.status(500).json({ error: result.error })
+    res.json({ clientes: result.data })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Error interno' })
