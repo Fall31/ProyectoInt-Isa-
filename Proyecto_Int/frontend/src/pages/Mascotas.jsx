@@ -1,24 +1,72 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMascotasAuth } from '@/hooks'
-import { Mascota } from '@/domain'
+import { supabase } from '../lib/supabaseClient'
 import './Mascotas.css'
 
 const Mascotas = () => {
   const navigate = useNavigate()
-  const { mascotas, loading, createMascota, updateMascota, deleteMascota } = useMascotasAuth()
+  const [mascotas, setMascotas] = useState([])
+  const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingMascota, setEditingMascota] = useState(null)
+  const [clienteData, setClienteData] = useState(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [imagePreview, setImagePreview] = useState(null)
   
   const [formData, setFormData] = useState({
     nombre_mascota: '',
-    especie: '',
+    especie: 'perro',
     raza: '',
     edad: '',
     peso: '',
-    genero_mascota: '',
-    alergias: ''
+    genero_mascota: 'macho',
+    alergias: '',
+    color: '',
+    foto_url: ''
   })
+
+  const cargarMascotas = useCallback(async () => {
+    try {
+      setLoading(true)
+      
+      // Obtener usuario autenticado
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (!user) {
+        navigate('/iniciar-sesion')
+        return
+      }
+
+      // Obtener datos del cliente
+      const { data: cliente } = await supabase
+        .from('cliente')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+
+      if (cliente) {
+        setClienteData(cliente)
+        
+        // Cargar mascotas del cliente
+        const { data: mascotasData } = await supabase
+          .from('mascota')
+          .select('*')
+          .eq('ci_cliente', cliente.ci_cliente)
+          .order('nombre_mascota', { ascending: true })
+
+        setMascotas(mascotasData || [])
+      }
+
+      setLoading(false)
+    } catch (err) {
+      console.error('Error cargando mascotas:', err)
+      setLoading(false)
+    }
+  }, [navigate])
+
+  useEffect(() => {
+    cargarMascotas()
+  }, [cargarMascotas])
 
   const handleInputChange = (e) => {
     setFormData({
@@ -27,20 +75,97 @@ const Mascotas = () => {
     })
   }
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona una imagen válida')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen no puede superar los 5MB')
+      return
+    }
+
+    try {
+      setUploadingImage(true)
+
+      // Preview local
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result)
+      }
+      reader.readAsDataURL(file)
+
+      // Crear nombre único para el archivo
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${clienteData?.ci_cliente}-${Date.now()}.${fileExt}`
+      const filePath = `mascotas/${fileName}`
+
+      // Subir a Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('imagenes')
+        .upload(filePath, file, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      // Obtener URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('imagenes')
+        .getPublicUrl(filePath)
+
+      setFormData(prev => ({ ...prev, foto_url: publicUrl }))
+      alert('✅ Foto cargada correctamente')
+    } catch (err) {
+      console.error('Error subiendo imagen:', err)
+      alert('Error al subir la imagen: ' + err.message)
+      setImagePreview(null)
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    const result = editingMascota
-      ? await updateMascota(editingMascota.ci_mascota, formData)
-      : await createMascota(formData)
+    if (!clienteData) {
+      alert('No se encontró información del cliente')
+      return
+    }
 
-    if (result.success) {
-      alert(editingMascota ? 'Mascota actualizada' : 'Mascota registrada correctamente')
+    try {
+      if (editingMascota) {
+        // Actualizar mascota existente
+        const { error } = await supabase
+          .from('mascota')
+          .update(formData)
+          .eq('ci_mascota', editingMascota.ci_mascota)
+
+        if (error) throw error
+        alert('Mascota actualizada correctamente')
+      } else {
+        // Crear nueva mascota
+        const { error } = await supabase
+          .from('mascota')
+          .insert([{
+            ...formData,
+            ci_cliente: clienteData.ci_cliente,
+            fecha_registro: new Date().toISOString()
+          }])
+
+        if (error) throw error
+        alert('Mascota registrada correctamente')
+      }
+
       setShowForm(false)
       setEditingMascota(null)
       resetForm()
-    } else {
-      alert('Error: ' + result.error)
+      cargarMascotas()
+    } catch (error) {
+      console.error('Error guardando mascota:', error)
+      alert('Error: ' + error.message)
     }
   }
 
@@ -49,36 +174,50 @@ const Mascotas = () => {
     setFormData({
       nombre_mascota: mascota.nombre_mascota,
       especie: mascota.especie,
-      raza: mascota.raza,
-      edad: mascota.edad,
-      peso: mascota.peso,
+      raza: mascota.raza || '',
+      edad: mascota.edad || '',
+      peso: mascota.peso || '',
       genero_mascota: mascota.genero_mascota,
-      alergias: mascota.alergias || ''
+      alergias: mascota.alergias || '',
+      color: mascota.color || '',
+      foto_url: mascota.foto_url || ''
     })
+    setImagePreview(null)
     setShowForm(true)
   }
 
   const handleDelete = async (ci_mascota) => {
-    if (!confirm('¿Estás seguro de eliminar esta mascota?')) return
+    if (!window.confirm('¿Estás seguro de eliminar esta mascota?')) return
 
-    const result = await deleteMascota(ci_mascota)
-    if (result.success) {
-      alert('Mascota eliminada')
-    } else {
-      alert('Error al eliminar: ' + result.error)
+    try {
+      const { error } = await supabase
+        .from('mascota')
+        .delete()
+        .eq('ci_mascota', ci_mascota)
+
+      if (error) throw error
+      
+      alert('Mascota eliminada correctamente')
+      cargarMascotas()
+    } catch (error) {
+      console.error('Error eliminando mascota:', error)
+      alert('Error al eliminar: ' + error.message)
     }
   }
 
   const resetForm = () => {
     setFormData({
       nombre_mascota: '',
-      especie: '',
+      especie: 'perro',
       raza: '',
       edad: '',
       peso: '',
-      genero_mascota: '',
-      alergias: ''
+      genero_mascota: 'macho',
+      alergias: '',
+      color: '',
+      foto_url: ''
     })
+    setImagePreview(null)
   }
 
   const handleCancel = () => {
@@ -113,6 +252,37 @@ const Mascotas = () => {
             <button className="btn-close" onClick={handleCancel}>×</button>
           </div>
           <form onSubmit={handleSubmit} className="mascota-form">
+            {/* Foto de mascota */}
+            <div className="form-group-full">
+              <label>📷 Foto de la Mascota</label>
+              <div className="mascota-photo-upload">
+                <div className="mascota-photo-preview">
+                  {imagePreview || formData.foto_url ? (
+                    <img 
+                      src={imagePreview || formData.foto_url} 
+                      alt="Mascota" 
+                      className="mascota-image"
+                    />
+                  ) : (
+                    <div className="mascota-placeholder">
+                      🐾
+                      <p>Sin foto</p>
+                    </div>
+                  )}
+                </div>
+                <label htmlFor="mascota-photo" className="btn-upload-photo">
+                  📸 {formData.foto_url ? 'Cambiar' : 'Subir'} Foto
+                  <input
+                    id="mascota-photo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              </div>
+            </div>
+
             <div className="form-row">
               <div className="form-group">
                 <label>Nombre *</label>
@@ -223,38 +393,48 @@ const Mascotas = () => {
           </div>
         ) : (
           mascotas.map((mascota) => {
-            const mascotaModel = mascota instanceof Mascota ? mascota : Mascota.fromAPI(mascota)
-            
             return (
-              <div key={mascotaModel.ci_mascota} className="mascota-card">
+              <div key={mascota.ci_mascota} className="mascota-card">
                 <div className="mascota-image">
-                  {mascotaModel.imagen ? (
-                    <img src={mascotaModel.imagen} alt={mascotaModel.nombre_mascota} />
+                  {mascota.foto_url ? (
+                    <img src={mascota.foto_url} alt={mascota.nombre_mascota} />
                   ) : (
-                    <div className="placeholder-image">🐾</div>
+                    <div className="placeholder-image">
+                      {mascota.especie === 'Perro' ? '🐕' : mascota.especie === 'Gato' ? '🐈' : '🐾'}
+                    </div>
                   )}
                 </div>
                 <div className="mascota-info">
-                  <h3>{mascotaModel.nombre_mascota}</h3>
-                  <p className="mascota-species">{mascotaModel.especie} • {mascotaModel.raza || 'Sin raza'}</p>
+                  <h3>{mascota.nombre_mascota}</h3>
+                  <p className="mascota-species">
+                    {mascota.especie?.toUpperCase()} • {mascota.raza || 'Sin raza'}
+                  </p>
                   <div className="mascota-details">
-                    <span>Edad: {mascotaModel.edad} años {mascotaModel.esAdulta() ? '(Adulta)' : ''}</span>
-                    <span>Peso: {mascotaModel.peso} kg</span>
-                    <span>Género: {mascotaModel.genero_mascota === 'M' ? 'Macho' : 'Hembra'}</span>
+                    <span>⏰ Edad: {mascota.edad || 'N/A'} años</span>
+                    <span>⚖️ Peso: {mascota.peso || 'N/A'} kg</span>
+                    <span>
+                      {mascota.genero_mascota === 'M' ? '♂️ Macho' : '♀️ Hembra'}
+                    </span>
                   </div>
-                  {mascotaModel.alergias && (
-                    <p className="mascota-allergies">⚠️ {mascotaModel.alergias}</p>
+                  {mascota.color && (
+                    <p className="mascota-color">🎨 Color: {mascota.color}</p>
+                  )}
+                  {mascota.alergias && (
+                    <p className="mascota-allergies">⚠️ Alergias: {mascota.alergias}</p>
                   )}
                 </div>
                 <div className="mascota-actions">
                   <button onClick={() => handleEdit(mascota)} className="btn-edit">
-                    Editar
+                    ✏️ Editar
                   </button>
-                  <button onClick={() => navigate(`/historial/${mascotaModel.ci_mascota}`)} className="btn-history">
-                    Historial
+                  <button 
+                    onClick={() => navigate(`/historial/${mascota.ci_mascota}`)} 
+                    className="btn-history"
+                  >
+                    📋 Historial
                   </button>
-                  <button onClick={() => handleDelete(mascotaModel.ci_mascota)} className="btn-delete">
-                    Eliminar
+                  <button onClick={() => handleDelete(mascota.ci_mascota)} className="btn-delete">
+                    🗑️ Eliminar
                   </button>
                 </div>
               </div>
