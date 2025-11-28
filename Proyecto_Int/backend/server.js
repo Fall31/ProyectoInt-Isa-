@@ -72,105 +72,19 @@ app.get('/api/cliente', async (req, res) => {
 })
 
 // --- Endpoints para PRODUCTOS ---
-app.get('/api/productos', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('producto')
-      .select('*')
-      .limit(50)
-    if (error) throw error
-    res.json({ productos: data })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error obteniendo productos' })
-  }
-})
+const productoController = require('./src/controllers/productoController')
+app.get('/api/productos', productoController.listProductos)
+app.post('/api/productos', productoController.createProducto)
 
 // --- Endpoints para SERVICIOS ---
-app.get('/api/servicios', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('servicio')
-      .select('*')
-      .eq('estado_servicio', 'activo')
-      .limit(50)
-    if (error) throw error
-    res.json({ servicios: data })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error obteniendo servicios' })
-  }
-})
+const servicioController = require('./src/controllers/servicioController')
+app.get('/api/servicios', servicioController.listServicios)
+app.post('/api/servicios', servicioController.createServicio)
 
 // --- Endpoints para CARRITO ---
-app.get('/api/carrito/:ci_cliente', async (req, res) => {
-  try {
-    const { ci_cliente } = req.params
-    const { data, error } = await supabase
-      .from('carrito')
-      .select(`
-        *,
-        detalle_carrito(
-          *,
-          producto(nombre_producto, precio, imagen)
-        )
-      `)
-      .eq('ci_cliente', ci_cliente)
-      .eq('estado', 'activo')
-    if (error) throw error
-    res.json({ carrito: data[0] || null })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error obteniendo carrito' })
-  }
-})
-
-app.post('/api/carrito/agregar', async (req, res) => {
-  try {
-    const { ci_cliente, id_producto, cantidad } = req.body
-    
-    // Buscar carrito activo del cliente
-    let { data: carrito, error } = await supabase
-      .from('carrito')
-      .select('*')
-      .eq('ci_cliente', ci_cliente)
-      .eq('estado', 'activo')
-      .single()
-    
-    // Si no existe carrito, crear uno
-    if (!carrito) {
-      const { data: nuevoCarrito, error: errorCarrito } = await supabase
-        .from('carrito')
-        .insert([{ ci_cliente, estado: 'activo' }])
-        .select()
-        .single()
-      if (errorCarrito) throw errorCarrito
-      carrito = nuevoCarrito
-    }
-    
-    // Agregar producto al carrito
-    const { data: producto } = await supabase
-      .from('producto')
-      .select('precio')
-      .eq('id_producto', id_producto)
-      .single()
-    
-    const { data, error: errorDetalle } = await supabase
-      .from('detalle_carrito')
-      .insert([{
-        id_carrito: carrito.id_carrito,
-        id_producto,
-        cantidad,
-        precio_unitario: producto.precio
-      }])
-    
-    if (errorDetalle) throw errorDetalle
-    res.json({ success: true })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error agregando al carrito' })
-  }
-})
+const carritoController = require('./src/controllers/carritoController')
+app.get('/api/carrito/:ci_cliente', carritoController.getCarrito)
+app.post('/api/carrito/agregar', carritoController.agregarProducto)
 
 // --- Endpoints para DOCTORES (Personal) ---
 app.get('/api/doctores', async (req, res) => {
@@ -195,101 +109,22 @@ app.get('/api/doctores', async (req, res) => {
 })
 
 // --- Endpoints para RESERVAS ---
-app.get('/api/reservas/:ci_cliente', async (req, res) => {
-  try {
-    const { ci_cliente } = req.params
-    const { data, error } = await supabase
-      .from('reserva')
-      .select(`
-        *,
-        servicio(nombre_servicio, precio_base),
-        mascota(nombre_mascota, especie)
-      `)
-      .eq('mascota.ci_cliente', ci_cliente)
-      .order('fecha_reserva', { ascending: false })
-      .limit(20)
-    if (error) throw error
-    res.json({ reservas: data })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error obteniendo reservas' })
-  }
-})
-
-app.post('/api/reservas', async (req, res) => {
-  try {
-    const { ci_mascota, id_servicio, fecha_reserva, hora_reserva, comentarios } = req.body
-    const { data, error } = await supabase
-      .from('reserva')
-      .insert([{
-        ci_mascota,
-        id_servicio,
-        fecha_reserva,
-        hora_reserva,
-        estado_reserva: 'pendiente',
-        comentarios,
-        tipo_reserva: 'cita'
-      }])
-    if (error) throw error
-    res.json({ success: true, reserva: data })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error creando reserva' })
-  }
-})
+const reservaController = require('./src/controllers/reservaController')
+app.get('/api/reservas/:ci_cliente', reservaController.getReservasByCliente)
+app.post('/api/reservas', reservaController.createReserva)
 
 // --- Endpoints para HISTORIAL MÉDICO ---
-app.get('/api/historial/:ci_cliente', async (req, res) => {
-  try {
-    const { ci_cliente } = req.params
-    const { data, error } = await supabase
-      .from('mascota')
-      .select(`
-        *,
-        historial_medico(
-          *,
-          historial_medico_detalle(
-            *,
-            diagnostico(descripcion),
-            servicio(nombre_servicio),
-            tratamiento(descripcion, medicamento)
-          )
-        )
-      `)
-      .eq('ci_cliente', ci_cliente)
-    if (error) throw error
-    res.json({ mascotas: data })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error obteniendo historial' })
-  }
-})
+const clienteController = require('./src/controllers/clienteController')
 
+// Delegar rutas de cliente al controller (separación de capas)
+app.post('/api/cliente', clienteController.createCliente)
+app.get('/api/cliente', clienteController.getClientes)
 // --- Endpoints para CHATBOT ---
-app.get('/api/chatbot/intents', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('chatbot_intent')
-      .select(`
-        *,
-        chatbot_respuesta(texto_respuesta)
-      `)
-    if (error) throw error
-    res.json({ intents: data })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error obteniendo intents' })
-  }
-})
-
 app.post('/api/chatbot/mensaje', async (req, res) => {
   try {
     const { ci_cliente, texto_mensaje } = req.body
-    
-    // Buscar intent basado en palabras clave simples
     let intent_id = null
-    const texto = texto_mensaje.toLowerCase()
-    
+    const texto = (texto_mensaje || '').toLowerCase()
     if (texto.includes('reserva') || texto.includes('cita')) {
       intent_id = 1 // asumiendo que intent 1 es para reservas
     } else if (texto.includes('precio') || texto.includes('costo')) {
@@ -391,76 +226,12 @@ app.put('/api/cliente/:userId', async (req, res) => {
 })
 
 // --- Endpoints para MASCOTAS ---
-// GET /api/mascotas/:userId -> obtener mascotas del usuario
-app.get('/api/mascotas/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params
-    const { data, error } = await supabase
-      .from('mascota')
-      .select('*')
-      .eq('ci_cliente', userId)
-    
-    if (error) throw error
-    res.json({ mascotas: data || [] })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error obteniendo mascotas' })
-  }
-})
+const mascotaController = require('./src/controllers/mascotaController')
+app.get('/api/mascotas/:userId', mascotaController.getMascotasByUserId)
+app.post('/api/mascotas', mascotaController.createMascota)
+app.put('/api/mascotas/:ci_mascota', mascotaController.updateMascota)
+app.delete('/api/mascotas/:ci_mascota', mascotaController.deleteMascota)
 
-// POST /api/mascotas -> registrar nueva mascota
-app.post('/api/mascotas', async (req, res) => {
-  try {
-    const mascotaData = req.body
-    const { data, error } = await supabase
-      .from('mascota')
-      .insert([mascotaData])
-      .select()
-    
-    if (error) throw error
-    res.status(201).json({ success: true, mascota: data[0] })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error registrando mascota' })
-  }
-})
-
-// PUT /api/mascotas/:ci_mascota -> actualizar mascota
-app.put('/api/mascotas/:ci_mascota', async (req, res) => {
-  try {
-    const { ci_mascota } = req.params
-    const updates = req.body
-    
-    const { data, error } = await supabase
-      .from('mascota')
-      .update(updates)
-      .eq('ci_mascota', ci_mascota)
-    
-    if (error) throw error
-    res.json({ success: true, data })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error actualizando mascota' })
-  }
-})
-
-// DELETE /api/mascotas/:ci_mascota -> eliminar mascota
-app.delete('/api/mascotas/:ci_mascota', async (req, res) => {
-  try {
-    const { ci_mascota } = req.params
-    
-    const { error } = await supabase
-      .from('mascota')
-      .delete()
-      .eq('ci_mascota', ci_mascota)
-    
-    if (error) throw error
-    res.json({ success: true })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error eliminando mascota' })
-  }
-})
 
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => console.log(`Servidor corriendo en http://localhost:${PORT}`))

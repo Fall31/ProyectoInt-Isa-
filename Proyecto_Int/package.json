@@ -5,5 +5,16 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.75.0",
     "concurrently": "^9.2.1"
-  }
+  },
+  "name": "proyecto_int",
+  "version": "1.0.0",
+  "description": "Este proyecto es un sistema de gestión veterinaria con backend Node.js + Express + Supabase y frontend React + Vite.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "devDependencies": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

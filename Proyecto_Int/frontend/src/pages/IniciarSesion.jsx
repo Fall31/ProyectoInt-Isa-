@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import './IniciarSesion.css'
 import { supabase } from '../lib/supabaseClient'
 import { useState } from 'react'
@@ -6,10 +6,13 @@ import { useState } from 'react'
 function IniciarSesion() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
 
   const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
+    setErrorMessage('')
+    
     const form = e.target
     const correo = form.email.value
     const contrasenia = form.password.value
@@ -22,34 +25,128 @@ function IniciarSesion() {
 
       if (error) {
         console.error('Supabase signIn error:', error)
-        alert('Error iniciando sesión: ' + error.message)
+        setErrorMessage(error.message)
         setLoading(false)
         return
       }
 
       console.log('Login success:', data)
-      alert('Inicio de sesión correcto')
-      setLoading(false)
-      navigate('/')
+      
+      // Detectar tipo de usuario y redirigir apropiadamente
+      const userId = data.user.id
+      
+      // Verificar si es personal
+      const { data: personalData, error: personalError } = await supabase
+        .from('personal')
+        .select('ci_personal, nombre, cargo')
+        .eq('user_id', userId)
+        .maybeSingle()
+      
+      if (!personalError && personalData) {
+        console.log('Usuario es personal:', personalData)
+        navigate('/dashboard-personal')
+        return
+      }
+      
+      // Verificar si es cliente
+      const { data: clienteData, error: clienteError } = await supabase
+        .from('cliente')
+        .select('ci_cliente, nombre_cliente')
+        .eq('user_id', userId)
+        .maybeSingle()
+      
+      if (!clienteError && clienteData) {
+        console.log('Usuario es cliente:', clienteData)
+        navigate('/dashboard')
+        return
+      }
+      
+      // Si no se encuentra en ninguna tabla, ir al dashboard general
+      console.warn('Usuario no vinculado a cliente ni personal')
+      navigate('/dashboard')
+      
     } catch (err) {
       console.error('Unexpected login error:', err)
-      alert('Error inesperado al iniciar sesión')
+      setErrorMessage('Error inesperado al iniciar sesión')
       setLoading(false)
     }
   }
 
   return (
-    <div className="login-container">
-      <h2>Iniciar Sesión</h2>
-      <form className="login-form" onSubmit={handleLogin}>
-        <label>Correo:</label>
-        <input name="email" type="email" placeholder="Ingresa tu correo" required />
+    <div className="auth-page">
+      <div className="auth-container">
+        <div className="auth-card">
+          <div className="auth-header">
+            <div className="auth-icon">🐾</div>
+            <h1>Bienvenido a VetCare</h1>
+            <p>Inicia sesión para acceder a tu cuenta</p>
+          </div>
 
-        <label>Contraseña:</label>
-        <input name="password" type="password" placeholder="Ingresa tu contraseña" required />
+          {errorMessage && (
+            <div className="error-banner">
+              <span>⚠️</span>
+              <p>{errorMessage}</p>
+            </div>
+          )}
 
-        <button type="submit" disabled={loading}>{loading ? 'Ingresando...' : 'Iniciar sesión'}</button>
-      </form>
+          <form className="auth-form" onSubmit={handleLogin}>
+            <div className="form-group">
+              <label htmlFor="email">Correo Electrónico</label>
+              <input 
+                id="email"
+                name="email" 
+                type="email" 
+                placeholder="tu@email.com" 
+                required 
+                autoComplete="email"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="password">Contraseña</label>
+              <input 
+                id="password"
+                name="password" 
+                type="password" 
+                placeholder="••••••••" 
+                required 
+                autoComplete="current-password"
+              />
+            </div>
+
+            <button type="submit" className="btn-submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <span className="spinner"></span>
+                  Ingresando...
+                </>
+              ) : (
+                <>
+                  <span>🔐</span>
+                  Iniciar Sesión
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="auth-footer">
+            <p>¿No tienes cuenta? <Link to="/registrar">Regístrate aquí</Link></p>
+            <Link to="/" className="link-secondary">← Volver al inicio</Link>
+          </div>
+        </div>
+
+        <div className="auth-illustration">
+          <div className="illustration-content">
+            <h2>🏥 Cuida a tus mascotas</h2>
+            <p>Accede a servicios veterinarios profesionales, historial médico y mucho más.</p>
+            <div className="features-list">
+              <div className="feature-item">✓ Reservas online</div>
+              <div className="feature-item">✓ Historial médico completo</div>
+              <div className="feature-item">✓ Tienda de productos</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

@@ -1,76 +1,101 @@
-import React, { useEffect, useState } from 'react'
-import { productosAPI, carritoAPI } from '../lib/api'
-import { supabase } from '../lib/supabaseClient'
+import React, { useState, useEffect, useMemo } from 'react'
+import supabaseServices from '../services/supabase'
 import './CatalogoProductos.css'
 
 const CatalogoProductos = () => {
   const [productos, setProductos] = useState([])
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState(null)
+  const [error, setError] = useState(null)
+  const [feedbackBtn, setFeedbackBtn] = useState(null)
+  
+  // Filtros y búsqueda
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('todas')
+  const [selectedTipo, setSelectedTipo] = useState('todos')
+  const [sortBy, setSortBy] = useState('nombre-asc')
+  const [viewMode, setViewMode] = useState('grid') // grid o list
 
   useEffect(() => {
-    // Obtener usuario actual
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-    }
-    getUser()
-
-    // Cargar productos desde API
-    const loadProductos = async () => {
+    const cargarProductos = async () => {
       try {
-        const data = await productosAPI.getAll()
-        setProductos(data.productos || [])
-      } catch (error) {
-        console.error('Error cargando productos:', error)
-        // Fallback a datos estáticos si API falla
-        setProductos([
-          { id_producto: 1, nombre_producto: 'Comida Premium', precio: 25.00, categoria: 'Alimento', imagen: '' },
-          { id_producto: 2, nombre_producto: 'Antipulgas', precio: 10.00, categoria: 'Salud', imagen: '' },
-          { id_producto: 3, nombre_producto: 'Juguete', precio: 7.50, categoria: 'Accesorios', imagen: '' },
-        ])
+        setLoading(true)
+        const data = await supabaseServices.productos.getAll()
+        setProductos(data)
+      } catch (err) {
+        console.error('Error cargando productos:', err)
+        setError('No se pudieron cargar los productos')
       } finally {
         setLoading(false)
       }
     }
-    loadProductos()
+
+    cargarProductos()
   }, [])
 
-  const agregarAlCarrito = async (producto) => {
+  // Obtener categorías únicas
+  const categorias = useMemo(() => {
+    const cats = [...new Set(productos.map(p => p.categoria).filter(Boolean))]
+    return ['todas', ...cats]
+  }, [productos])
+
+  // Obtener tipos únicos
+  const tipos = useMemo(() => {
+    const tps = [...new Set(productos.map(p => p.tipo).filter(Boolean))]
+    return ['todos', ...tps]
+  }, [productos])
+
+  // Filtrar y ordenar productos
+  const productosFiltrados = useMemo(() => {
+    let resultado = [...productos]
+
+    // Búsqueda por nombre
+    if (searchTerm) {
+      resultado = resultado.filter(p =>
+        p.nombre_producto?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.descripcion?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    // Filtrar por categoría
+    if (selectedCategory !== 'todas') {
+      resultado = resultado.filter(p => p.categoria === selectedCategory)
+    }
+
+    // Filtrar por tipo
+    if (selectedTipo !== 'todos') {
+      resultado = resultado.filter(p => p.tipo === selectedTipo)
+    }
+
+    // Ordenar
+    switch (sortBy) {
+      case 'nombre-asc':
+        resultado.sort((a, b) => a.nombre_producto?.localeCompare(b.nombre_producto))
+        break
+      case 'nombre-desc':
+        resultado.sort((a, b) => b.nombre_producto?.localeCompare(a.nombre_producto))
+        break
+      case 'precio-asc':
+        resultado.sort((a, b) => (a.precio || 0) - (b.precio || 0))
+        break
+      case 'precio-desc':
+        resultado.sort((a, b) => (b.precio || 0) - (a.precio || 0))
+        break
+      default:
+        break
+    }
+
+    return resultado
+  }, [productos, searchTerm, selectedCategory, selectedTipo, sortBy])
+
+  const handleAgregarAlCarrito = async (producto) => {
     try {
-      // Agregar a localStorage para usuarios no autenticados
-      const carrito = JSON.parse(localStorage.getItem('carrito') || '[]')
-      const existingIndex = carrito.findIndex(item => item.id_producto === producto.id_producto)
+      await supabaseServices.carrito.agregar(producto.id_producto, 1)
       
-      if (existingIndex >= 0) {
-        carrito[existingIndex].cantidad += 1
-      } else {
-        carrito.push({
-          id_producto: producto.id_producto,
-          nombre: producto.nombre_producto,
-          precio: producto.precio,
-          cantidad: 1
-        })
-      }
-      localStorage.setItem('carrito', JSON.stringify(carrito))
-
-      // Si hay usuario autenticado, también agregar a la DB
-      if (user) {
-        await carritoAPI.agregar(user.id, producto.id_producto, 1)
-      }
-
       // Mostrar feedback visual
-      const button = event.target
-      const originalText = button.textContent
-      button.textContent = '✓ Agregado'
-      button.style.backgroundColor = 'var(--success-color)'
-      setTimeout(() => {
-        button.textContent = originalText
-        button.style.backgroundColor = 'var(--mid-blue)'
-      }, 1500)
-
+      setFeedbackBtn(producto.id_producto)
+      setTimeout(() => setFeedbackBtn(null), 1500)
     } catch (error) {
-      console.error('Error agregando al carrito:', error)
+      console.error('Error al agregar al carrito:', error)
       alert('Error al agregar al carrito')
     }
   }
@@ -83,40 +108,158 @@ const CatalogoProductos = () => {
     )
   }
 
+  if (error) {
+    return (
+      <div className="catalogo-page">
+        <div className="error-message">Error: {error}</div>
+      </div>
+    )
+  }
+
   return (
     <div className="catalogo-page">
       <div className="page-header">
-        <h1>Catálogo de Productos</h1>
+        <h1>🛍️ Catálogo de Productos</h1>
         <p className="subtitle">Encuentra todo lo que necesitas para tu mascota</p>
+        <div className="results-count">
+          {productosFiltrados.length} producto{productosFiltrados.length !== 1 ? 's' : ''} encontrado{productosFiltrados.length !== 1 ? 's' : ''}
+        </div>
       </div>
-      
-      <div className="catalogo-grid">
-        {productos.map(p => (
-          <article key={p.id_producto} className="product-card">
-            <div className="product-img">
-              {p.imagen ? (
-                <img src={p.imagen} alt={p.nombre_producto} />
-              ) : (
-                <div className="img-placeholder">📦</div>
-              )}
-            </div>
-            <div className="product-body">
-              <h3>{p.nombre_producto}</h3>
-              <p className="categoria">{p.categoria}</p>
-              {p.descripcion && <p className="descripcion">{p.descripcion}</p>}
-              <div className="product-footer">
-                <span className="price">${p.precio.toFixed(2)}</span>
-                <button 
-                  className="btn-primary" 
-                  onClick={() => agregarAlCarrito(p)}
-                >
-                  Agregar
-                </button>
-              </div>
-            </div>
-          </article>
-        ))}
+
+      {/* Barra de Filtros y Búsqueda */}
+      <div className="filters-bar">
+        <div className="search-box">
+          <input
+            type="text"
+            placeholder="🔍 Buscar productos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
+        </div>
+
+        <div className="filters-row">
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="filter-select"
+          >
+            {categorias.map(cat => (
+              <option key={cat} value={cat}>
+                {cat === 'todas' ? '📁 Todas las categorías' : `📁 ${cat}`}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={selectedTipo}
+            onChange={(e) => setSelectedTipo(e.target.value)}
+            className="filter-select"
+          >
+            {tipos.map(tipo => (
+              <option key={tipo} value={tipo}>
+                {tipo === 'todos' ? '🏷️ Todos los tipos' : `🏷️ ${tipo}`}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="filter-select"
+          >
+            <option value="nombre-asc">⬆️ Nombre A-Z</option>
+            <option value="nombre-desc">⬇️ Nombre Z-A</option>
+            <option value="precio-asc">💰 Precio Menor</option>
+            <option value="precio-desc">💰 Precio Mayor</option>
+          </select>
+
+          <div className="view-toggle">
+            <button
+              className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
+              onClick={() => setViewMode('grid')}
+              title="Vista en cuadrícula"
+            >
+              ▦
+            </button>
+            <button
+              className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
+              onClick={() => setViewMode('list')}
+              title="Vista en lista"
+            >
+              ☰
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* Grid de Productos */}
+      {productosFiltrados.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-icon">🔍</div>
+          <h3>No se encontraron productos</h3>
+          <p>Intenta cambiar los filtros de búsqueda</p>
+          <button
+            onClick={() => {
+              setSearchTerm('')
+              setSelectedCategory('todas')
+              setSelectedTipo('todos')
+            }}
+            className="btn-reset"
+          >
+            Limpiar filtros
+          </button>
+        </div>
+      ) : (
+        <div className={`catalogo-grid ${viewMode}`}>
+          {productosFiltrados.map((producto, index) => {
+            const isFeedback = feedbackBtn === producto.id_producto
+            const precioFormateado = new Intl.NumberFormat('es-UY', { 
+              style: 'currency', 
+              currency: 'UYU' 
+            }).format(producto.precio || 0)
+            
+            return (
+              <article 
+                key={producto.id_producto} 
+                className="product-card"
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
+                <div className="product-img">
+                  {producto.imagen ? (
+                    <img src={producto.imagen} alt={producto.nombre_producto} />
+                  ) : (
+                    <div className="img-placeholder">📦</div>
+                  )}
+                  {producto.marca && <span className="product-badge">{producto.marca}</span>}
+                </div>
+                <div className="product-body">
+                  <div className="product-tags">
+                    <span className="categoria-badge">{producto.categoria}</span>
+                    {producto.tipo && <span className="tipo-badge">{producto.tipo}</span>}
+                  </div>
+                  <h3>{producto.nombre_producto}</h3>
+                  {producto.descripcion && (
+                    <p className="descripcion">
+                      {producto.descripcion.substring(0, 100)}
+                      {producto.descripcion.length > 100 ? '...' : ''}
+                    </p>
+                  )}
+                  <div className="product-footer">
+                    <span className="price">{precioFormateado}</span>
+                    <button 
+                      className={`btn-add-cart ${isFeedback ? 'added' : ''}`}
+                      onClick={() => handleAgregarAlCarrito(producto)}
+                    >
+                      {isFeedback ? '✓ Agregado' : '🛒 Agregar'}
+                    </button>
+                  </div>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

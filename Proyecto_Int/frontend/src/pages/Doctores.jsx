@@ -1,33 +1,92 @@
+import React, { useState, useEffect } from 'react'
+import supabaseServices from '../services/supabase'
 import './Doctores.css'
 
 const Doctores = () => {
-	const doctors = [
-		{ id: 1, name: 'Dra. Ana Pérez', specialty: 'Medicina General', bio: '10 años de experiencia en perros y gatos.' },
-		{ id: 2, name: 'Dr. Luis Gómez', specialty: 'Cirugía', bio: 'Especialista en procedimientos quirúrgicos de emergencia.' },
-		{ id: 3, name: 'Dra. Carla Ruiz', specialty: 'Dermatología', bio: 'Atención a problemas de piel y alergias.' },
-	]
+  const [doctores, setDoctores] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-	return (
-		<div className="doctores-page">
-			<div className="page-header">
-				<h1>Doctores</h1>
-				<p className="subtitle">Conoce a nuestro equipo médico</p>
-			</div>
+  useEffect(() => {
+    cargarDoctores()
+  }, [])
 
-			<div className="doctors-grid">
-				{doctors.map((d) => (
-					<div key={d.id} className="doctor-card-page">
-						<div className="avatar-large">{d.name.split(' ')[1][0]}</div>
-						<div className="doctor-details">
-							<div className="doctor-name">{d.name}</div>
-							<div className="doctor-specialty">{d.specialty}</div>
-							<p className="doctor-bio">{d.bio}</p>
-						</div>
-					</div>
-				))}
-			</div>
-		</div>
-	)
+  const cargarDoctores = async () => {
+    try {
+      setLoading(true)
+      const data = await supabaseServices.doctores.getAll()
+      setDoctores(data)
+    } catch (err) {
+      console.error('Error cargando doctores:', err)
+      setError('No se pudieron cargar los doctores')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="doctores-page">
+        <div className="loading-spinner">Cargando doctores...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="doctores-page">
+        <div className="error-message">{error}</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="doctores-page">
+      <div className="page-header">
+        <h1>Nuestro Equipo Médico</h1>
+        <p className="subtitle">Profesionales certificados dedicados al cuidado de tus mascotas</p>
+      </div>
+
+      <div className="doctors-grid">
+        {doctores.length === 0 ? (
+          <p className="no-data">No hay doctores disponibles en este momento.</p>
+        ) : (
+          doctores.map((doctor) => {
+            const iniciales = `${doctor.primer_nombre?.[0] || ''}${doctor.primer_apellido?.[0] || ''}`
+            const nombreCompleto = `${doctor.primer_nombre || ''} ${doctor.segundo_nombre || ''} ${doctor.primer_apellido || ''} ${doctor.segundo_apellido || ''}`.trim()
+            
+            return (
+              <div key={doctor.ci_personal} className="doctor-card-page">
+                <div className="doctor-avatar">
+                  <div className="avatar-circle">{iniciales}</div>
+                  {doctor.estado === 'activo' && <span className="status-badge">✓ Activo</span>}
+                </div>
+                <div className="doctor-details">
+                  <div className="doctor-name">{nombreCompleto}</div>
+                  <div className="doctor-specialty">
+                    <span className="icon">🩺</span>
+                    {doctor.funcion || 'Veterinario'}
+                  </div>
+                  {doctor.correo && (
+                    <div className="doctor-contact">
+                      <span className="icon">📧</span>
+                      <a href={`mailto:${doctor.correo}`}>{doctor.correo}</a>
+                    </div>
+                  )}
+                  {doctor.telefono && (
+                    <div className="doctor-contact">
+                      <span className="icon">📞</span>
+                      <a href={`tel:${doctor.telefono}`}>{doctor.telefono}</a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+    </div>
+  )
 }
 
 export default Doctores

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import Home from "./pages/Home";
 import Registrar from "./pages/Registrar";
 import IniciarSesion from "./pages/IniciarSesion";
 import AgregarProducto from "./pages/AgregarProducto";
@@ -11,23 +12,33 @@ import CatalogoProductos from "./pages/CatalogoProductos";
 import CatalogoServicios from "./pages/CatalogoServicios";
 import Carrito from "./pages/Carrito";
 import ChatbotWidget from './components/ChatbotWidget'
+import SupabaseDebug from './components/SupabaseDebug'
 import { supabase } from './lib/supabaseClient'
 import "./App.css";
 import CatalogoVacunas from './pages/CatalogoVacunas';
 import ArticulosBlog from './pages/ArticulosBlog';
 import Perfil from './pages/Perfil';
 import Mascotas from './pages/Mascotas';
+import Inventario from './pages/Inventario';
+import Proveedores from './pages/Proveedores';
+import Horarios from './pages/Horarios';
+import DashboardPersonal from './pages/DashboardPersonal';
+import PerfilPersonal from './pages/PerfilPersonal';
+import MisReservas from './pages/MisReservas';
+import HistorialMedicoPersonal from './pages/HistorialMedicoPersonal';
+import RecetasTratamientos from './pages/RecetasTratamientos';
+import GestionBlog from './pages/GestionBlog';
+import ChatPersonal from './pages/ChatPersonal';
+import MisHorarios from './pages/MisHorarios';
+import Servicios from './pages/Servicios';
+import DashboardAdmin from './pages/DashboardAdmin';
+import ReportesAdmin from './pages/ReportesAdmin';
 
 function App() {
-  const [mensaje, setMensaje] = useState("");
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/saludo")
-      .then((res) => res.json())
-      .then((data) => setMensaje(data.mensaje))
-      .catch((err) => console.error(err));
-    // obtener usuario actual (supabase)
+    // Obtener usuario actual (supabase)
     const getUser = async () => {
       try {
         const {
@@ -39,78 +50,54 @@ function App() {
       }
     }
 
-    getUser()
+    getUser();
   }, []);
 
   return (
     <Router>
       <div className="app-container">
-          <aside className="sidebar">
-          <h2>VetCare - Clínica Veterinaria</h2>
-          <nav>
-            <ul>
-              <li><Link to="/">Inicio</Link></li>
-              <li><Link to="/dashboard">Dashboard</Link></li>
-              <li><Link to="/perfil">Mi Perfil</Link></li>
-              <li><Link to="/mascotas">Mis Mascotas</Link></li>
-              <li><Link to="/reservas">Reservas</Link></li>
-              <li><Link to="/catalogo-servicios">Servicios</Link></li>
-              <li><Link to="/catalogo-productos">Tienda</Link></li>
-              <li><Link to="/catalogo-vacunas">Vacunas</Link></li>
-              <li><Link to="/carrito">Carrito</Link></li>
-              <li><Link to="/historial">Historial Médico</Link></li>
-              <li><Link to="/doctores">Doctores</Link></li>
-              <li><Link to="/articulos-blog">Blog</Link></li>
-              <li><Link to="/agregar-producto">Admin: Productos</Link></li>
-            </ul>
-          </nav>
-        </aside>
+        {/* Navbar Horizontal */}
+        <nav className="sidebar">
+          <h2>🐾 VetCare</h2>
+          
+          <ul>
+            <li><Link to="/">Inicio</Link></li>
+            <li><Link to="/dashboard">Dashboard</Link></li>
+            {user && <li><Link to="/dashboard-admin">📊 Admin Dashboard</Link></li>}
+            {user && <li><Link to="/reportes-admin">📑 Reportes</Link></li>}
+            <li><Link to="/perfil">Perfil</Link></li>
+            <li><Link to="/mascotas">Mascotas</Link></li>
+            <li><Link to="/reservas">Reservas</Link></li>
+            <li><Link to="/catalogo-servicios">Servicios</Link></li>
+            <li><Link to="/catalogo-productos">Tienda</Link></li>
+            <li><Link to="/catalogo-vacunas">Vacunas</Link></li>
+            <li><Link to="/carrito">🛒</Link></li>
+            <li><Link to="/historial">Historial</Link></li>
+            <li><Link to="/doctores">Doctores</Link></li>
+            <li><Link to="/articulos-blog">Blog</Link></li>
+            {user && <li><Link to="/agregar-producto">AgregarProducto</Link></li>}
+            {user && <li><Link to="/inventario">📦 Inventario</Link></li>}
+            {user && <li><Link to="/proveedores">🏢 Proveedores</Link></li>}
+            {user && <li><Link to="/servicios">💼 Servicios</Link></li>}
+            {user && <li><Link to="/horarios">🕐 Horarios</Link></li>}
+            {user && <li><Link to="/dashboard-personal">👨‍⚕️ Dashboard Personal</Link></li>}
+          </ul>
 
-        <main className="content">
-          <header className="header">
+          <div className="header">
             <Link to="/iniciar-sesion" className="login-btn">Iniciar sesión</Link>
             <Link to="/registrar" className="register-btn">Registrar</Link>
-          </header>
+          </div>
+        </nav>
+
+        {/* Contenido scrolleable */}
+        <main className="content">
+          <div className="content-wrapper">
 
           <Routes>
-            <Route
-              path="/"
-              element={
-                <div className="welcome-page">
-                  <section className="hero">
-                    <div className="hero-content">
-                      <h1>Bienvenido a VetCare</h1>
-                      <p className="lead">Cuidamos a tus mascotas con cariño y profesionalismo. Servicios integrales, vacunación y productos seleccionados para su bienestar.</p>
-                      <div className="hero-actions">
-                        <Link to="/reservas" className="btn primary">Reservar cita</Link>
-                        <Link to="/catalogo-productos" className="btn outline">Ver productos</Link>
-                      </div>
-                    </div>
-                    <div className="hero-illustration" aria-hidden></div>
-                  </section>
-
-                  <section className="features">
-                    <div className="home-cards">
-                      <div className="card">
-                        <h3>Reservas</h3>
-                        <p>Agenda citas con nuestros especialistas de forma rápida y segura.</p>
-                      </div>
-                      <div className="card">
-                        <h3>Productos</h3>
-                        <p>Alimentos, medicamentos y accesorios seleccionados para la salud de tu mascota.</p>
-                      </div>
-                      <div className="card">
-                        <h3>Vacunas</h3>
-                        <p>Esquemas de vacunación completos y asesoría profesional.</p>
-                      </div>
-                    </div>
-                  </section>
-
-                  <p className="api-message">{mensaje}</p>
-                </div>
-              }
-            />
+            <Route path="/" element={<Home />} />
             <Route path="/dashboard" element={<Dashboard user={user} />} />
+            <Route path="/dashboard-admin" element={<DashboardAdmin />} />
+            <Route path="/reportes-admin" element={<ReportesAdmin />} />
             <Route path="/perfil" element={<Perfil />} />
             <Route path="/mascotas" element={<Mascotas />} />
             <Route path="/catalogo-productos" element={<CatalogoProductos />} />
@@ -125,9 +112,23 @@ function App() {
             <Route path="/agregar-producto" element={<AgregarProducto />} />
             <Route path="/catalogo-vacunas" element={<CatalogoVacunas />} />
             <Route path="/articulos-blog" element={<ArticulosBlog />} />
+            <Route path="/inventario" element={<Inventario />} />
+            <Route path="/proveedores" element={<Proveedores />} />
+            <Route path="/servicios" element={<Servicios />} />
+            <Route path="/horarios" element={<Horarios />} />
+            <Route path="/dashboard-personal" element={<DashboardPersonal />} />
+            <Route path="/perfil-personal" element={<PerfilPersonal />} />
+            <Route path="/mis-reservas" element={<MisReservas />} />
+            <Route path="/historial-medico-personal" element={<HistorialMedicoPersonal />} />
+            <Route path="/recetas-tratamientos" element={<RecetasTratamientos />} />
+            <Route path="/gestion-blog" element={<GestionBlog />} />
+            <Route path="/chat-personal" element={<ChatPersonal />} />
+            <Route path="/mis-horarios" element={<MisHorarios />} />
           </Routes>
+          </div>
         </main>
-  <ChatbotWidget />
+        <ChatbotWidget />
+        <SupabaseDebug />
       </div>
     </Router>
   );
