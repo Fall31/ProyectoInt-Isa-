@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { jsPDF } from 'jspdf'
+import html2canvas from 'html2canvas'
 import './ReportesAdmin.css'
 
 const ReportesAdmin = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [generandoPDF, setGenerandoPDF] = useState(false)
+  const reporteRef = useRef(null)
 
   const [inventario, setInventario] = useState([])
   const [horariosAsignaciones, setHorariosAsignaciones] = useState([])
@@ -57,8 +61,7 @@ const ReportesAdmin = () => {
             id_horario,
             dia_semana,
             hora_inicio,
-            hora_fin,
-            descripcion
+            hora_fin
           )
         `)
         .order('fecha_asignacion', { ascending: true })
@@ -89,56 +92,107 @@ const ReportesAdmin = () => {
     }
   }
 
+  const descargarPDF = async () => {
+    try {
+      setGenerandoPDF(true)
+      
+      // Crear un elemento temporal para capturar el contenido
+      const element = reporteRef.current
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      })
+
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      })
+
+      const imgWidth = 210 // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
+      let position = 0
+
+      // Agregar imagen al PDF (maneja múltiples páginas si es necesario)
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= 297 // A4 height in mm
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+        heightLeft -= 297
+      }
+
+      // Descargar el PDF
+      const fechaActual = new Date().toLocaleDateString('es-ES').replace(/\//g, '-')
+      pdf.save(`Reporte_Administrativo_${fechaActual}.pdf`)
+
+      setGenerandoPDF(false)
+    } catch (err) {
+      console.error('Error generando PDF:', err)
+      alert('Error al generar el PDF: ' + err.message)
+      setGenerandoPDF(false)
+    }
+  }
+
   if (loading) return <div className="reportes-loading">⏳ Generando reporte...</div>
 
   return (
     <div className="reportes-page">
       <div className="page-header">
-        <h1>📑 Reportes Administrativos</h1>
-        <p className="subtitle">Inventario, Horarios y Conteo de Clientes</p>
+        <div>
+          <h1>📑 Reportes Administrativos</h1>
+          <p className="subtitle">Inventario, Horarios y Conteo de Clientes</p>
+        </div>
       </div>
 
       {error && <div className="error-banner">❌ {error}</div>}
 
-      <div className="summary-grid">
-        <div className="summary-card">
-          <div className="card-icon">📦</div>
-          <div className="card-body">
-            <h3>Inventario</h3>
-            <div className="big-number">{stats.totalInventario}</div>
-            <p>{stats.stockBajo} items con stock bajo</p>
+      <div ref={reporteRef} className="reporte-content">
+        <div className="summary-grid">
+          <div className="summary-card">
+            <div className="card-icon">📦</div>
+            <div className="card-body">
+              <h3>Inventario</h3>
+              <div className="big-number">{stats.totalInventario}</div>
+              <p>{stats.stockBajo} items con stock bajo</p>
+            </div>
+          </div>
+
+          <div className="summary-card">
+            <div className="card-icon">🕐</div>
+            <div className="card-body">
+              <h3>Horarios</h3>
+              <div className="big-number">{stats.totalHorarios}</div>
+              <p>{horariosAsignaciones.length} asignaciones activas</p>
+            </div>
+          </div>
+
+          <div className="summary-card">
+            <div className="card-icon">👥</div>
+            <div className="card-body">
+              <h3>Clientes</h3>
+              <div className="big-number">{clientesCount}</div>
+              <p>Total de clientes registrados</p>
+            </div>
+          </div>
+
+          <div className="summary-card">
+            <div className="card-icon">👨‍⚕️</div>
+            <div className="card-body">
+              <h3>Personal</h3>
+              <div className="big-number">{stats.totalPersonal}</div>
+              <p>Total personal registrado</p>
+            </div>
           </div>
         </div>
 
-        <div className="summary-card">
-          <div className="card-icon">🕐</div>
-          <div className="card-body">
-            <h3>Horarios</h3>
-            <div className="big-number">{stats.totalHorarios}</div>
-            <p>{horariosAsignaciones.length} asignaciones activas</p>
-          </div>
-        </div>
-
-        <div className="summary-card">
-          <div className="card-icon">👥</div>
-          <div className="card-body">
-            <h3>Clientes</h3>
-            <div className="big-number">{clientesCount}</div>
-            <p>Total de clientes registrados</p>
-          </div>
-        </div>
-
-        <div className="summary-card">
-          <div className="card-icon">👨‍⚕️</div>
-          <div className="card-body">
-            <h3>Personal</h3>
-            <div className="big-number">{stats.totalPersonal}</div>
-            <p>Total personal registrado</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="report-tables">
+        <div className="report-tables">
         <div className="panel">
           <h2>📋 Inventario detallado</h2>
           {inventario.length === 0 ? (
@@ -204,8 +258,17 @@ const ReportesAdmin = () => {
           )}
         </div>
       </div>
+      </div>
 
-      <div className="refresh-actions">
+      <div className="action-buttons">
+        <button 
+          className="btn-download-pdf" 
+          onClick={descargarPDF}
+          disabled={generandoPDF}
+          title="Descargar reporte como PDF"
+        >
+          {generandoPDF ? '⏳ Generando PDF...' : '📥 Descargar PDF'}
+        </button>
         <button className="btn-refresh" onClick={cargarReporte}>🔄 Volver a cargar reporte</button>
       </div>
     </div>
