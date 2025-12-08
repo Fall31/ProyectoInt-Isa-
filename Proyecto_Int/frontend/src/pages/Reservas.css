@@ -206,16 +206,17 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: var(--spacing-lg);
+  overflow: hidden;
 }
 
 .modal-content {
   background: var(--bg-secondary);
   border-radius: var(--radius-xl);
-  max-width: 600px;
-  width: 100%;
+  max-width: 500px;
+  width: 90%;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   box-shadow: var(--shadow-xl);
 }
 
@@ -223,8 +224,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--spacing-xl);
+  padding: var(--spacing-lg);
   border-bottom: 2px solid var(--bg-primary);
+  flex-shrink: 0;
 }
 
 .modal-header h2 {
@@ -249,7 +251,50 @@
 }
 
 .reserva-form {
-  padding: var(--spacing-xl);
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.form-group label {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: var(--spacing-md);
+  border: 2px solid var(--bg-primary);
+  border-radius: var(--radius-lg);
+  font-family: inherit;
+  font-size: var(--text-base);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: border-color var(--transition-base);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
 }
 
 .form-row {
@@ -262,9 +307,64 @@
   display: flex;
   gap: var(--spacing-md);
   justify-content: flex-end;
-  margin-top: var(--spacing-xl);
-  padding-top: var(--spacing-lg);
+  padding: var(--spacing-lg);
   border-top: 2px solid var(--bg-primary);
+  flex-shrink: 0;
+}
+
+/* Selector de tamaño y precio */
+.size-selector {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.size-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border: 2px solid var(--bg-primary);
+  border-radius: var(--radius-lg);
+  background: var(--bg-primary);
+  cursor: pointer;
+}
+
+.size-option.selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.price-indicator {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Slots de horario */
+.slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.slot-btn {
+  padding: 10px 8px;
+  border: 2px solid var(--bg-primary);
+  border-radius: var(--radius-lg);
+  background: var(--bg-primary);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.slot-btn.selected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.slot-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {

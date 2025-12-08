@@ -1,12 +1,46 @@
 import { useNavigate, Link } from 'react-router-dom'
 import './IniciarSesion.css'
 import { supabase } from '../lib/supabaseClient'
-import { useState } from 'react'
+import { useAuth } from '../contexts/AuthContext'
+import { useState, useEffect } from 'react'
 
 function IniciarSesion() {
   const navigate = useNavigate()
+  const { user, userRole, profileComplete, isClient, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+
+  // Redirigir basado en rol y estado del perfil
+  useEffect(() => {
+    if (!authLoading && user && userRole) {
+      console.log('🔍 Usuario autenticado, verificando estado:', {
+        email: user.email,
+        rol: userRole,
+        perfil_completo: profileComplete
+      })
+
+      // Si es cliente SIN perfil completo, ir a completar perfil
+      if (isClient && !profileComplete) {
+        console.log('→ Redirigiendo a completar perfil (perfil incompleto)')
+        navigate('/completar-perfil', { replace: true })
+        return
+      }
+
+      // Si es cliente CON perfil completo, ir a dashboard
+      if (userRole === 'cliente' && profileComplete) {
+        console.log('→ Redirigiendo a dashboard de cliente')
+        navigate('/dashboard', { replace: true })
+        return
+      }
+
+      // Si es personal o admin
+      if (userRole === 'personal' || userRole === 'administrador') {
+        console.log('→ Redirigiendo a dashboard personal')
+        navigate('/dashboard-personal', { replace: true })
+        return
+      }
+    }
+  }, [user, userRole, profileComplete, isClient, authLoading, navigate])
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -25,49 +59,31 @@ function IniciarSesion() {
 
       if (error) {
         console.error('Supabase signIn error:', error)
-        setErrorMessage(error.message)
+        
+        // Manejo específico de errores
+        if (error.message.includes('Email not confirmed')) {
+          setErrorMessage(
+            '❌ Email no confirmado. ' +
+            'Por favor, revisa tu email y haz click en el link de confirmación. ' +
+            'Si no lo recibiste, puedes reenviar el email en /confirmacion-email'
+          )
+        } else if (error.message.includes('Invalid login credentials')) {
+          setErrorMessage('❌ Email o contraseña incorrectos')
+        } else if (error.message.includes('Too many requests')) {
+          setErrorMessage('❌ Demasiados intentos. Intenta en 5 minutos')
+        } else {
+          setErrorMessage('❌ ' + (error.message || 'Error al iniciar sesión'))
+        }
         setLoading(false)
         return
       }
 
-      console.log('Login success:', data)
-      
-      // Detectar tipo de usuario y redirigir apropiadamente
-      const userId = data.user.id
-      
-      // Verificar si es personal
-      const { data: personalData, error: personalError } = await supabase
-        .from('personal')
-        .select('ci_personal, nombre, cargo')
-        .eq('user_id', userId)
-        .maybeSingle()
-      
-      if (!personalError && personalData) {
-        console.log('Usuario es personal:', personalData)
-        navigate('/dashboard-personal')
-        return
-      }
-      
-      // Verificar si es cliente
-      const { data: clienteData, error: clienteError } = await supabase
-        .from('cliente')
-        .select('ci_cliente, nombre_cliente')
-        .eq('user_id', userId)
-        .maybeSingle()
-      
-      if (!clienteError && clienteData) {
-        console.log('Usuario es cliente:', clienteData)
-        navigate('/dashboard')
-        return
-      }
-      
-      // Si no se encuentra en ninguna tabla, ir al dashboard general
-      console.warn('Usuario no vinculado a cliente ni personal')
-      navigate('/dashboard')
+      console.log('✅ Login exitoso:', data.user.id)
+      // El useEffect arriba manejará la redirección automáticamente
       
     } catch (err) {
-      console.error('Unexpected login error:', err)
-      setErrorMessage('Error inesperado al iniciar sesión')
+      console.error('Error inesperado en login:', err)
+      setErrorMessage('❌ Error inesperado al iniciar sesión')
       setLoading(false)
     }
   }
@@ -131,6 +147,7 @@ function IniciarSesion() {
 
           <div className="auth-footer">
             <p>¿No tienes cuenta? <Link to="/registrar">Regístrate aquí</Link></p>
+            <p><Link to="/recuperar-contrasenia" className="link-secondary">¿Olvidaste tu contraseña?</Link></p>
             <Link to="/" className="link-secondary">← Volver al inicio</Link>
           </div>
         </div>

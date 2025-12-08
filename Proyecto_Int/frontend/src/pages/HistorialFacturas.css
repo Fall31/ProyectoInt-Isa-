@@ -1,0 +1,319 @@
+.historial-page {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.historial-header {
+  margin-bottom: 2rem;
+}
+
+.historial-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.cliente-info {
+  color: #666;
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Filtros */
+.filtros-facturas {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.filtro-btn {
+  padding: 0.8rem 1.5rem;
+  border: 2px solid #ddd;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+}
+
+.filtro-btn:hover {
+  border-color: #4CAF50;
+  color: #4CAF50;
+}
+
+.filtro-btn.activo {
+  background: #4CAF50;
+  color: white;
+  border-color: #4CAF50;
+}
+
+/* Grid de Facturas */
+.facturas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.factura-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.factura-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #333;
+}
+
+.estado {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.estado.pagada {
+  background: #d4edda;
+  color: #155724;
+}
+
+.estado.pendiente {
+  background: #fff3cd;
+  color: #856404;
+}
+
+/* Info */
+.card-info {
+  margin-bottom: 1.5rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-row .label {
+  color: #666;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.info-row .valor {
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.info-row .valor.total {
+  color: #4CAF50;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+/* Acciones */
+.card-actions {
+  display: flex;
+  gap: 0.8rem;
+}
+
+.btn-ver, .btn-descargar {
+  flex: 1;
+  padding: 0.8rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.btn-ver {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.btn-ver:hover {
+  background: #1976d2;
+  color: white;
+}
+
+.btn-descargar {
+  background: #4CAF50;
+  color: white;
+}
+
+.btn-descargar:hover {
+  background: #45a049;
+  transform: translateY(-2px);
+}
+
+/* Empty State */
+.empty-facturas {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: white;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.empty-facturas h3 {
+  font-size: 1.5rem;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.empty-facturas p {
+  color: #666;
+  margin-bottom: 2rem;
+}
+
+.btn-comprar {
+  padding: 0.8rem 2rem;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.btn-comprar:hover {
+  background: #45a049;
+}
+
+/* Footer */
+.historial-footer {
+  text-align: center;
+  padding-top: 2rem;
+}
+
+.btn-volver {
+  padding: 0.8rem 2rem;
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.btn-volver:hover {
+  background: #e0e0e0;
+}
+
+/* Loading */
+.loading {
+  text-align: center;
+  padding: 3rem;
+  font-size: 1.1rem;
+  color: #666;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .historial-page {
+    padding: 1rem;
+  }
+
+  .historial-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .filtros-facturas {
+    flex-direction: column;
+  }
+
+  .filtro-btn {
+    width: 100%;
+  }
+
+  .facturas-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card-actions {
+    flex-direction: column;
+  }
+
+  .btn-ver, .btn-descargar {
+    width: 100%;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .sidebar {
+    display: none !important;
+  }
+
+  nav {
+    display: none !important;
+  }
+
+  .header {
+    display: none !important;
+  }
+
+  .chatbot-widget {
+    display: none !important;
+  }
+
+  .historial-page {
+    padding: 0;
+    margin: 0;
+    background: white;
+  }
+
+  .content {
+    margin-left: 0 !important;
+  }
+
+  /* Mostrar solo lo necesario */
+  .historial-header {
+    margin-bottom: 1rem;
+  }
+
+  .filtros-facturas {
+    display: none;
+  }
+
+  .btn-volver {
+    display: none;
+  }
+}

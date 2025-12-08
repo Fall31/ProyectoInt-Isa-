@@ -20,12 +20,32 @@ async function insertCliente(payload) {
   return { data, error }
 }
 
+async function getClienteByUserId(user_id) {
+  const { data, error } = await supabase
+    .from('cliente')
+    .select('*')
+    .eq('user_id', user_id)
+    .single()
+  return { data, error }
+}
+
 async function listClientes(limit = 100) {
   const { data, error } = await supabase.from('cliente').select('*').limit(limit)
   return { data, error }
 }
 
+async function updateCliente(ci_cliente, payload) {
+  const { data, error } = await supabase
+    .from('cliente')
+    .update(payload)
+    .eq('ci_cliente', ci_cliente)
+    .select()
+  return { data, error }
+}
+
 module.exports = {
   insertCliente,
+  getClienteByUserId,
   listClientes,
+  updateCliente,
 }

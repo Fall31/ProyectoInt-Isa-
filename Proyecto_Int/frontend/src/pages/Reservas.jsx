@@ -19,8 +19,13 @@ const Reservas = () => {
     id_servicio: '',
     fecha_reserva: '',
     hora_reserva: '',
-    comentarios: ''
+    comentarios: '',
+    tipo_reserva: 'consulta'
   })
+  const [tamano, setTamano] = useState('')
+  const [precioEstimado, setPrecioEstimado] = useState(0)
+  const [slots, setSlots] = useState([])
+  const [slotSeleccionado, setSlotSeleccionado] = useState('')
 
   useEffect(() => {
     cargarDatos()
@@ -64,9 +69,39 @@ const Reservas = () => {
         }
       }
 
-      // Cargar servicios disponibles
-      const serviciosData = await supabaseServices.servicios.getAll()
-      setServicios(serviciosData.filter(s => s.estado === 'activo'))
+      // Cargar servicios disponibles desde catálogo
+      const { data: serviciosData } = await supabase
+        .from('catalogo_servicio')
+        .select(`
+          id_catalogo,
+          tipo_servicio,
+          costo_pequeno,
+          costo_mediano,
+          costo_grande,
+          duracion,
+          descripcion,
+          id_servicio,
+          servicio:id_servicio (
+            nombre_servicio,
+            foto_url
+          )
+        `)
+        .eq('disponibilidad', true)
+        .order('tipo_servicio')
+      
+      // Transformar para compatibilidad
+      const serviciosTransformados = (serviciosData || []).map(s => ({
+        id_catalogo: s.id_catalogo,
+        id_servicio: s.id_servicio,
+        tipo_servicio: s.tipo_servicio,
+        costo_pequeno: s.costo_pequeno,
+        costo_mediano: s.costo_mediano,
+        costo_grande: s.costo_grande,
+        duracion: s.duracion,
+        descripcion: s.descripcion
+      }))
+      
+      setServicios(serviciosTransformados)
 
       setLoading(false)
     } catch (err) {
@@ -75,6 +110,83 @@ const Reservas = () => {
       setLoading(false)
     }
   }
+
+  // Utilidades de horario
+  const parseTime = (t) => {
+    if (!t) return null
+    const [h,m] = String(t).split(':').map(x => parseInt(x,10))
+    return { h, m }
+  }
+
+  const timeToString = (h,m) => `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`
+
+  const addMinutes = (h,m,delta) => {
+    const total = h*60 + m + delta
+    const hh = Math.floor(total/60)
+    const mm = total % 60
+    return {h: hh, m: mm}
+  }
+
+  const combineDateTime = (dateStr, timeStr) => {
+    if (!dateStr) return null
+    const t = timeStr && timeStr.length >= 4 ? timeStr : '00:00'
+    // Construimos ISO local sin zona; el navegador lo interpreta en local
+    return new Date(`${dateStr}T${t}`)
+  }
+
+  const nombreDiaES = (fechaStr) => {
+    const d = new Date(fechaStr)
+    const dias = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado']
+    return dias[d.getDay()]
+  }
+
+  const generarSlots = (h) => {
+    const ini = parseTime(h.hora_inicio)
+    const fin = parseTime(h.hora_fin)
+    const di = parseTime(h.descanso_inicio)
+    const df = parseTime(h.descanso_fin)
+    const slots = []
+    if (!ini || !fin) return slots
+    let cur = { ...ini }
+    while (cur.h*60 + cur.m < fin.h*60 + fin.m) {
+      const label = timeToString(cur.h, cur.m)
+      const next = addMinutes(cur.h, cur.m, 30)
+      const enDescanso = di && df && (cur.h*60+cur.m >= di.h*60+di.m) && (cur.h*60+cur.m < df.h*60+df.m)
+      if (!enDescanso) slots.push(label)
+      cur = next
+    }
+    return slots
+  }
+
+  // Recalcular precio cuando cambia servicio/tamaño
+  useEffect(() => {
+    const srv = servicios.find(s => String(s.id_servicio) === String(formData.id_servicio))
+    if (!srv) { setPrecioEstimado(0); return }
+    const precio = tamano === 'pequeno' ? srv.costo_pequeno
+      : tamano === 'mediano' ? srv.costo_mediano
+      : tamano === 'grande' ? srv.costo_grande
+      : 0
+    setPrecioEstimado(Number(precio || 0))
+  }, [formData.id_servicio, tamano, servicios])
+
+  // Cargar horarios y generar slots cuando cambia servicio/fecha
+  useEffect(() => {
+    const cargarSlots = async () => {
+      setSlots([])
+      setSlotSeleccionado('')
+      if (!formData.id_servicio || !formData.fecha_reserva) return
+      const dia = nombreDiaES(formData.fecha_reserva)
+      const { data: hrows } = await supabase
+        .from('horario')
+        .select('*')
+        .eq('id_servicio', formData.id_servicio)
+        .ilike('dia_semana', dia + '%')
+        .eq('disponibilidad', true)
+      const all = (hrows || []).flatMap(generarSlots)
+      setSlots(all)
+    }
+    cargarSlots()
+  }, [formData.id_servicio, formData.fecha_reserva])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -85,20 +197,38 @@ const Reservas = () => {
     }
 
     try {
-      const { data, error } = await supabase
+      // Mensaje previo si es vacunación
+      const comentariosBase = formData.tipo_reserva === 'vacunacion'
+        ? `Solicitud de vacunación: el doctor evaluará si procede. ${formData.comentarios || ''}`
+        : formData.comentarios || ''
+
+      // Intentar guardar tamaño si existe columna
+      let payload = {
+        ci_mascota: formData.ci_mascota,
+        id_servicio: parseInt(formData.id_servicio),
+        fecha_reserva: formData.fecha_reserva,
+        hora_reserva: slotSeleccionado || formData.hora_reserva,
+        estado_reserva: 'pendiente',
+        notificacion: true,
+        comentarios: comentariosBase,
+        tipo_reserva: formData.tipo_reserva
+      }
+      if (tamano) payload.tamano_mascota = tamano
+
+      let insert = await supabase
         .from('reserva')
-        .insert([{
-          ci_mascota: parseInt(formData.ci_mascota),
-          id_servicio: parseInt(formData.id_servicio),
-          fecha_reserva: formData.fecha_reserva,
-          hora_reserva: formData.hora_reserva,
-          estado_reserva: 'pendiente',
-          notificacion: true,
-          comentarios: formData.comentarios,
-          ci_cliente: cliente.ci_cliente
-        }])
+        .insert([payload])
         .select()
 
+      if (insert.error && String(insert.error?.message || '').includes('tamano_mascota')) {
+        delete payload.tamano_mascota
+        insert = await supabase
+          .from('reserva')
+          .insert([payload])
+          .select()
+      }
+
+      const { error } = insert
       if (error) throw error
 
       alert('✅ Reserva creada exitosamente')
@@ -108,8 +238,13 @@ const Reservas = () => {
         id_servicio: '',
         fecha_reserva: '',
         hora_reserva: '',
-        comentarios: ''
+        comentarios: '',
+        tipo_reserva: 'consulta'
       })
+      setTamano('')
+      setPrecioEstimado(0)
+      setSlots([])
+      setSlotSeleccionado('')
       cargarDatos()
     } catch (err) {
       console.error('Error creando reserva:', err)
@@ -117,14 +252,25 @@ const Reservas = () => {
     }
   }
 
-  const cancelarReserva = async (idReserva) => {
+  const cancelarReserva = async (reservaObj) => {
     if (!window.confirm('¿Estás seguro de cancelar esta reserva?')) return
 
     try {
+      // Regla: no permitir cancelar con menos de 1 hora de anticipación
+      const dt = combineDateTime(reservaObj.fecha_reserva, reservaObj.hora_reserva)
+      if (dt) {
+        const diffMs = dt.getTime() - Date.now()
+        const diffMin = diffMs / 60000
+        if (diffMin <= 60) {
+          alert('No puedes cancelar con menos de 1 hora de anticipación.')
+          return
+        }
+      }
+
       const { error } = await supabase
         .from('reserva')
         .update({ estado_reserva: 'cancelada' })
-        .eq('id_reserva', idReserva)
+        .eq('id_reserva', reservaObj.id_reserva)
 
       if (error) throw error
 
@@ -244,7 +390,7 @@ const Reservas = () => {
                   <div className="reserva-actions">
                     <button 
                       className="btn-cancel"
-                      onClick={() => cancelarReserva(r.id_reserva)}
+                      onClick={() => cancelarReserva(r)}
                     >
                       Cancelar Reserva
                     </button>
@@ -294,10 +440,20 @@ const Reservas = () => {
                   <option value="">Selecciona un servicio</option>
                   {servicios.map(s => (
                     <option key={s.id_servicio} value={s.id_servicio}>
-                      {s.nombre_servicio} - ${s.precio_base}
+                      {s.tipo_servicio} - Bs. {s.costo_pequeno}/{s.costo_mediano}/{s.costo_grande}
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div className="form-group">
+                <label>Tamaño y precio estimado</label>
+                <div className="size-selector">
+                  <button type="button" className={`size-option ${tamano==='pequeno'?'selected':''}`} onClick={() => setTamano('pequeno')}>🐶 Pequeño</button>
+                  <button type="button" className={`size-option ${tamano==='mediano'?'selected':''}`} onClick={() => setTamano('mediano')}>🐕 Mediano</button>
+                  <button type="button" className={`size-option ${tamano==='grande'?'selected':''}`} onClick={() => setTamano('grande')}>🐕‍🦺 Grande</button>
+                </div>
+                <div className="price-indicator">Precio: Bs. {Number(precioEstimado||0).toFixed(2)}</div>
               </div>
 
               <div className="form-row">
@@ -314,15 +470,38 @@ const Reservas = () => {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="hora">Hora *</label>
-                  <input
-                    type="time"
-                    id="hora"
-                    required
-                    value={formData.hora_reserva}
-                    onChange={(e) => setFormData({...formData, hora_reserva: e.target.value})}
-                  />
+                  <label>Horario disponible *</label>
+                  {slots.length === 0 ? (
+                    <div style={{color:'var(--text-secondary)'}}>Selecciona servicio y fecha para ver los horarios</div>
+                  ) : (
+                    <div className="slots-grid">
+                      {slots.map(h => (
+                        <button
+                          key={h}
+                          type="button"
+                          className={`slot-btn ${slotSeleccionado===h?'selected':''}`}
+                          onClick={() => { setSlotSeleccionado(h); setFormData({...formData, hora_reserva: h}) }}
+                        >{h}</button>
+                      ))}
+                    </div>
+                  )}
                 </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="tipo_reserva">Tipo de Reserva *</label>
+                <select
+                  id="tipo_reserva"
+                  required
+                  value={formData.tipo_reserva}
+                  onChange={(e) => setFormData({...formData, tipo_reserva: e.target.value})}
+                >
+                  <option value="consulta">Consulta</option>
+                  <option value="cirugia">Cirugía</option>
+                  <option value="vacunacion">Vacunación</option>
+                  <option value="limpieza">Limpieza</option>
+                  <option value="otro">Otro</option>
+                </select>
               </div>
 
               <div className="form-group">

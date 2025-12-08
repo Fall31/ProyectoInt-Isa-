@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-  "start": "node server.js",
-  "start:mock": "node start-mock.js",
+    "start": "node server.js",
+    "start:mock": "node start-mock.js",
     "test": "jest --verbose"
   },
   "keywords": [],
@@ -12,16 +12,19 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^5.1.0",
     "@supabase/supabase-js": "^2.0.0",
-    "dotenv": "^16.0.0"
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
+    "express": "^5.1.0",
+    "multer": "^2.0.2"
   },
   "devDependencies": {
     "jest": "^29.0.0"
   },
   "jest": {
     "testEnvironment": "node",
-    "roots": ["<rootDir>/tests"]
+    "roots": [
+      "<rootDir>/tests"
+    ]
   }
 }

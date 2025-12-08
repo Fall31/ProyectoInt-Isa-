@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import supabaseServices from '../services/supabase'
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabaseClient'
 import './CatalogoProductos.css'
 
 const CatalogoProductos = () => {
+  const navigate = useNavigate()
   const [productos, setProductos] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -19,8 +21,12 @@ const CatalogoProductos = () => {
     const cargarProductos = async () => {
       try {
         setLoading(true)
-        const data = await supabaseServices.productos.getAll()
-        setProductos(data)
+        const { data, error: err } = await supabase
+          .from('producto')
+          .select('*')
+        
+        if (err) throw err
+        setProductos(data || [])
       } catch (err) {
         console.error('Error cargando productos:', err)
         setError('No se pudieron cargar los productos')
@@ -89,14 +95,103 @@ const CatalogoProductos = () => {
 
   const handleAgregarAlCarrito = async (producto) => {
     try {
-      await supabaseServices.carrito.agregar(producto.id_producto, 1)
+      // Obtener usuario autenticado
+      const { data: { user } } = await supabase.auth.getUser()
       
+      if (!user) {
+        navigate('/iniciar-sesion')
+        return
+      }
+
+      // Obtener cliente
+      const { data: clienteData } = await supabase
+        .from('cliente')
+        .select('ci_cliente')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!clienteData) {
+        alert('No se encontró información del cliente')
+        return
+      }
+
+      // Verificar si existe carrito activo
+      let { data: carritoData } = await supabase
+        .from('carrito')
+        .select('id_carrito')
+        .eq('ci_cliente', clienteData.ci_cliente)
+        .eq('estado', 'activo')
+        .single()
+
+      // Si no existe, crear uno
+      if (!carritoData) {
+        const { data: nuevoCarrito, error: carritoError } = await supabase
+          .from('carrito')
+          .insert([{
+            ci_cliente: clienteData.ci_cliente,
+            fecha_creacion: new Date().toISOString(),
+            estado: 'activo',
+            total: 0
+          }])
+          .select()
+
+        if (carritoError) throw carritoError
+        carritoData = nuevoCarrito[0]
+      }
+
+      // Verificar si el producto ya existe en el carrito
+      const { data: detalleExistente } = await supabase
+        .from('detalle_carrito')
+        .select('*')
+        .eq('id_carrito', carritoData.id_carrito)
+        .eq('id_producto', producto.id_producto)
+        .single()
+
+      if (detalleExistente) {
+        // Actualizar cantidad (subtotal se calcula automáticamente en la BD)
+        const nuevaCantidad = detalleExistente.cantidad + 1
+
+        await supabase
+          .from('detalle_carrito')
+          .update({
+            cantidad: nuevaCantidad
+          })
+          .eq('id_detalle_carrito', detalleExistente.id_detalle_carrito)
+      } else {
+        // Agregar nuevo item (subtotal se calcula automáticamente en la BD)
+        const { error: detalleError } = await supabase
+          .from('detalle_carrito')
+          .insert([{
+            id_carrito: carritoData.id_carrito,
+            id_producto: producto.id_producto,
+            cantidad: 1,
+            precio_unitario: producto.precio
+          }])
+
+        if (detalleError) throw detalleError
+      }
+
+      // Actualizar total del carrito
+      const { data: detalles } = await supabase
+        .from('detalle_carrito')
+        .select('subtotal')
+        .eq('id_carrito', carritoData.id_carrito)
+
+      const total = detalles.reduce((sum, d) => sum + parseFloat(d.subtotal), 0)
+
+      await supabase
+        .from('carrito')
+        .update({ total })
+        .eq('id_carrito', carritoData.id_carrito)
+
       // Mostrar feedback visual
       setFeedbackBtn(producto.id_producto)
       setTimeout(() => setFeedbackBtn(null), 1500)
+      
+      alert('✓ Producto agregado al carrito')
     } catch (error) {
       console.error('Error al agregar al carrito:', error)
-      alert('Error al agregar al carrito')
+      alert('Error al agregar al carrito: ' + error.message)
     }
   }
 

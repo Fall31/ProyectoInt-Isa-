@@ -1,0 +1,172 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    ✅ RESUMEN: SISTEMA DE IMÁGENES COMPLETADO
+═══════════════════════════════════════════════════════════════════════════════
+
+📅 FECHA: 27 de Noviembre de 2025
+🎯 OBJETIVO: Configurar sistema de imágenes para VetCare con múltiples buckets
+
+═══════════════════════════════════════════════════════════════════════════════
+                              ✅ COMPLETADO
+═══════════════════════════════════════════════════════════════════════════════
+
+🔧 BACKEND - ENTIDADES ACTUALIZADAS:
+
+✅ cliente.js
+   - AGREGADO: foto_url (TEXT)
+   - PK: ci_cliente
+   - Bucket: imagenes_clientes
+
+✅ mascota.js
+   - ACTUALIZADO: Agregados todos los campos de BD
+   - EXISTENTE: imagen (TEXT)
+   - PK: ci_mascota
+   - Bucket: imagenes_mascotas
+
+✅ producto.js
+   - ACTUALIZADO: Agregados todos los campos de BD (categoria, marca, fecha_vencimiento, lote, tipo, etc.)
+   - EXISTENTE: imagen (TEXT)
+   - PK: id_producto
+   - FK: id_catalogo → catalogoproducto
+   - Bucket: imagenes_productos
+
+✅ servicio.js
+   - AGREGADO: foto_url (TEXT)
+   - AGREGADOS: duracion, categoria, requiere_equipo
+   - PK: id_servicio
+   - Bucket: imagenes_servicios
+
+✅ vacuna.js (NUEVA)
+   - AGREGADO: foto_url (TEXT)
+   - PK: id_vacuna
+   - FK: id_producto
+   - Bucket: imagenes_productos (compartido con producto)
+
+✅ personal.js (NUEVA - Doctores)
+   - EXISTENTE: imagen (TEXT)
+   - PK: ci_personal
+   - Bucket: imagenes_doctores
+
+✅ catalogProducto.js (NUEVA)
+   - AGREGADO: foto_url (TEXT)
+   - PK: id_catalogo
+   - Bucket: imagenes_productos (compartido con producto)
+
+🎯 SERVICIO REUTILIZABLE:
+
+✅ imagenService.js
+   Métodos:
+   - subirImagen(bucketName, carpeta, identificador, archivo)
+   - eliminarImagen(bucketName, urlPublica)
+   - obtenerConfiguracionBucket(tipoEntidad)
+
+═══════════════════════════════════════════════════════════════════════════════
+                          📋 PRÓXIMAS ACCIONES
+═══════════════════════════════════════════════════════════════════════════════
+
+PASO 1️⃣: EJECUTAR SQL EN SUPABASE
+───────────────────────────────────────────────────────────────────────────────
+
+Archivo: SQL_AGREGAR_COLUMNAS.sql
+
+Acciones:
+   1. Ve a Supabase Dashboard → SQL Editor
+   2. Copia el contenido de SQL_AGREGAR_COLUMNAS.sql
+   3. Pega en el editor y haz click en RUN
+   
+Resultado esperado:
+   ✅ Columna foto_url agregada a: cliente, servicio, catalogoproducto, vacuna
+
+PASO 2️⃣: CREAR BUCKETS EN STORAGE
+───────────────────────────────────────────────────────────────────────────────
+
+Buckets a crear (todos como "Public"):
+   1. imagenes_clientes
+   2. imagenes_mascotas
+   3. imagenes_productos
+   4. imagenes_servicios
+   5. imagenes_doctores
+
+Acciones:
+   1. Ve a Supabase Dashboard → Storage
+   2. Click "Create bucket"
+   3. Ingresa el nombre (ej: imagenes_clientes)
+   4. Marca como "Public"
+   5. Click "Create bucket"
+   6. Repite para los 5 buckets
+
+PASO 3️⃣: CONFIGURAR POLÍTICAS RLS (OPCIONAL PERO RECOMENDADO)
+───────────────────────────────────────────────────────────────────────────────
+
+Archivo: POLITICAS_RLS_STORAGE.sql
+
+Para cada bucket:
+   1. Ve a Storage → [nombre_bucket] → Policies
+   2. Click "New Policy"
+   3. Copia cada SELECT, INSERT, UPDATE, DELETE de POLITICAS_RLS_STORAGE.sql
+   4. Pega y aplica
+
+PASO 4️⃣: ACTUALIZAR CONTROLLERS FRONTEND
+───────────────────────────────────────────────────────────────────────────────
+
+Crear endpoints para subir imágenes:
+
+   POST /api/cliente/subir-imagen
+   POST /api/mascota/subir-imagen
+   POST /api/producto/subir-imagen
+   POST /api/servicio/subir-imagen
+   POST /api/doctor/subir-imagen
+
+Usar ImagenService para manejar la lógica
+
+═══════════════════════════════════════════════════════════════════════════════
+                        📊 MAPPING FINAL DE IMÁGENES
+═══════════════════════════════════════════════════════════════════════════════
+
+TABLA                 │ COLUMNA IMAGEN │ BUCKET                 │ RUTA EJEMPLO
+─────────────────────┼────────────────┼────────────────────────┼────────────────────────
+cliente              │ foto_url       │ imagenes_clientes      │ clientes/{ci}/{id}-{ci}.jpg
+mascota              │ imagen         │ imagenes_mascotas      │ mascotas/{ci_m}/{id}-{ci_m}.jpg
+producto             │ imagen         │ imagenes_productos     │ productos/{id_prod}/{id}-{id_prod}.jpg
+catalogoproducto     │ foto_url       │ imagenes_productos     │ catalogos/{id_cat}/{id}-{id_cat}.jpg
+vacuna               │ foto_url       │ imagenes_productos     │ vacunas/{id_vac}/{id}-{id_vac}.jpg
+servicio             │ foto_url       │ imagenes_servicios     │ servicios/{id_ser}/{id}-{id_ser}.jpg
+personal (doctores)  │ imagen         │ imagenes_doctores      │ doctores/{ci_p}/{id}-{ci_p}.jpg
+
+═══════════════════════════════════════════════════════════════════════════════
+                        💾 ARCHIVOS CREADOS/ACTUALIZADOS
+═══════════════════════════════════════════════════════════════════════════════
+
+BACKEND:
+   ✅ backend/src/entities/cliente.js (ACTUALIZADO)
+   ✅ backend/src/entities/mascota.js (ACTUALIZADO)
+   ✅ backend/src/entities/producto.js (ACTUALIZADO)
+   ✅ backend/src/entities/servicio.js (ACTUALIZADO)
+   ✅ backend/src/entities/vacuna.js (NUEVA)
+   ✅ backend/src/entities/personal.js (NUEVA)
+   ✅ backend/src/entities/catalogProducto.js (NUEVA)
+   ✅ backend/src/services/imagenService.js (NUEVO)
+
+DOCUMENTACIÓN:
+   ✅ PLAN_IMAGENES_COMPLETO.sql
+   ✅ SQL_AGREGAR_COLUMNAS.sql
+   ✅ POLITICAS_RLS_STORAGE.sql
+   ✅ GUIA_SISTEMA_IMAGENES.md
+   ✅ RESUMEN_SISTEMA_IMAGENES.txt (este archivo)
+
+═══════════════════════════════════════════════════════════════════════════════
+                             🎬 PRÓXIMA SESIÓN
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Ejecuta los pasos 1-3 en Supabase (SQL + Buckets + Políticas)
+2. Crea los endpoints REST en backend/src/controllers para usar ImagenService
+3. Actualiza los formularios frontend para subir imágenes
+4. Prueba la integración completa
+
+═══════════════════════════════════════════════════════════════════════════════
+
+¿DUDAS?
+   - Ver: GUIA_SISTEMA_IMAGENES.md para ejemplos completos
+   - Ver: PLAN_IMAGENES_COMPLETO.sql para estructura de relaciones
+   - Ver: Servicio imagenService.js para métodos disponibles
+
+═══════════════════════════════════════════════════════════════════════════════

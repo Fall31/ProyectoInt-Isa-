@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import './Perfil.css'
 
 const Perfil = () => {
@@ -219,31 +219,26 @@ const Perfil = () => {
 
       // Subir a Supabase Storage
       const { error: uploadError } = await supabase.storage
-        .from('imagenes')
+        .from('imagenes_clientes')
         .upload(filePath, file, { upsert: true })
 
       if (uploadError) {
         console.error('Error al subir imagen:', uploadError)
-        // Detectar error común de bucket inexistente y mostrar guía al usuario
-        if (uploadError.message && uploadError.message.toLowerCase().includes('bucket')) {
-          alert('Error al subir la imagen: Bucket not found.\n\nSolución rápida: crea un bucket llamado "imagenes" en Supabase Storage (ve a Storage → Create bucket).\nHe creado `GUIA_CONFIGURACION_SUPABASE.md` en el proyecto con pasos detallados.');
-        } else {
-          alert('Error al subir la imagen: ' + (uploadError.message || uploadError))
-        }
+        alert('Error al subir la imagen: ' + (uploadError.message || uploadError))
         setUploadingImage(false)
         return
       }
 
       // Obtener URL pública
       const { data: { publicUrl } } = supabase.storage
-        .from('imagenes')
+        .from('imagenes_clientes')
         .getPublicUrl(filePath)
 
       // Actualizar en la base de datos
       const { error: updateError } = await supabase
         .from('cliente')
         .update({ foto_url: publicUrl })
-        .eq('ci_cliente', perfil.ci_cliente)
+        .eq('user_id', user.id)
 
       if (updateError) throw updateError
 
@@ -269,9 +264,14 @@ const Perfil = () => {
           <h1>Mi Perfil</h1>
           <p>Gestiona tu información personal y configuración de cuenta</p>
         </div>
-        <button className="btn-logout" onClick={handleLogout}>
-          🚪 Cerrar Sesión
-        </button>
+        <div className="perfil-actions">
+          <Link to="/cambiar-contrasenia" className="btn-change-password">
+            🔐 Cambiar Contraseña
+          </Link>
+          <button className="btn-logout" onClick={handleLogout}>
+            🚪 Cerrar Sesión
+          </button>
+        </div>
       </div>
 
       <div className="perfil-content">
@@ -303,6 +303,9 @@ const Perfil = () => {
           <div className="account-info">
             <h3>{formData.nombre_cliente} {formData.primer_apellido}</h3>
             <p>{user?.email}</p>
+            {perfil?.fecha_registro && (
+              <p className="account-date">Fecha de registro: {new Date(perfil.fecha_registro).toLocaleDateString('es-ES')}</p>
+            )}
             <span className="account-badge">✓ Cuenta Activa</span>
           </div>
         </div>

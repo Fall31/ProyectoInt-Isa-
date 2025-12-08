@@ -283,6 +283,19 @@
   }
 }
 
+.link-secondary {
+  color: var(--secondary-color, #5DADE2);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  transition: all 0.3s ease;
+  display: inline-block;
+}
+
+.link-secondary:hover {
+  text-decoration: underline;
+  opacity: 0.8;
+}
+
 @media (max-width: 480px) {
   .auth-page {
     padding: var(--spacing-md);

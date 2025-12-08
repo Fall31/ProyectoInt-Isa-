@@ -21,8 +21,7 @@ const Mascotas = () => {
     peso: '',
     genero_mascota: 'macho',
     alergias: '',
-    color: '',
-    foto_url: ''
+    imagen: ''
   })
 
   const cargarMascotas = useCallback(async () => {
@@ -106,17 +105,17 @@ const Mascotas = () => {
 
       // Subir a Supabase Storage
       const { error: uploadError } = await supabase.storage
-        .from('imagenes')
+        .from('imagenes_mascotas')
         .upload(filePath, file, { upsert: true })
 
       if (uploadError) throw uploadError
 
       // Obtener URL pública
       const { data: { publicUrl } } = supabase.storage
-        .from('imagenes')
+        .from('imagenes_mascotas')
         .getPublicUrl(filePath)
 
-      setFormData(prev => ({ ...prev, foto_url: publicUrl }))
+      setFormData(prev => ({ ...prev, imagen: publicUrl }))
       alert('✅ Foto cargada correctamente')
     } catch (err) {
       console.error('Error subiendo imagen:', err)
@@ -146,13 +145,15 @@ const Mascotas = () => {
         if (error) throw error
         alert('Mascota actualizada correctamente')
       } else {
-        // Crear nueva mascota
+        // Crear nueva mascota - generar ID único (máx 20 caracteres)
+        const timestamp = Date.now().toString().slice(-8) // últimos 8 dígitos del timestamp
+        const ci_mascota = `M${timestamp}`
         const { error } = await supabase
           .from('mascota')
           .insert([{
+            ci_mascota,
             ...formData,
-            ci_cliente: clienteData.ci_cliente,
-            fecha_registro: new Date().toISOString()
+            ci_cliente: clienteData.ci_cliente
           }])
 
         if (error) throw error
@@ -179,8 +180,7 @@ const Mascotas = () => {
       peso: mascota.peso || '',
       genero_mascota: mascota.genero_mascota,
       alergias: mascota.alergias || '',
-      color: mascota.color || '',
-      foto_url: mascota.foto_url || ''
+      imagen: mascota.imagen || ''
     })
     setImagePreview(null)
     setShowForm(true)
@@ -214,8 +214,7 @@ const Mascotas = () => {
       peso: '',
       genero_mascota: 'macho',
       alergias: '',
-      color: '',
-      foto_url: ''
+      imagen: ''
     })
     setImagePreview(null)
   }
@@ -416,9 +415,6 @@ const Mascotas = () => {
                       {mascota.genero_mascota === 'M' ? '♂️ Macho' : '♀️ Hembra'}
                     </span>
                   </div>
-                  {mascota.color && (
-                    <p className="mascota-color">🎨 Color: {mascota.color}</p>
-                  )}
                   {mascota.alergias && (
                     <p className="mascota-allergies">⚠️ Alergias: {mascota.alergias}</p>
                   )}

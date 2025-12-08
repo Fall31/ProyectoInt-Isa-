@@ -252,8 +252,8 @@ export const vacunasSupabase = {
   async getCatalogo() {
     const { data, error } = await supabase
       .from('vacunacatalog')
-      .select('*')
-      .order('nombre_vacuna_cat', { ascending: true })
+      .select('id_vacuna_catalog, tipo_vacuna, dosis, descripcion, estado, id_vacuna')
+      .order('tipo_vacuna', { ascending: true })
     
     if (error) throw error
     return data

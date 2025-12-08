@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import SummaryCard from '../components/SummaryCard'
+import ÚltimasCompras from '../components/ÚltimasCompras'
 import './Dashboard.css'
 
 const Dashboard = ({ user }) => {
@@ -178,6 +179,13 @@ const Dashboard = ({ user }) => {
               <p>Editar datos</p>
             </div>
           </button>
+          <button className="action-card card-warning" onClick={() => navigate('/historial-facturas')}>
+            <div className="action-icon">📋</div>
+            <div className="action-content">
+              <h3>Mis Compras</h3>
+              <p>Ver historial</p>
+            </div>
+          </button>
         </div>
       </section>
 
@@ -247,6 +255,12 @@ const Dashboard = ({ user }) => {
             </div>
           </section>
         )}
+
+        {/* SECCIÓN ÚLTIMAS COMPRAS */}
+        <section className="compras-section">
+          <h3>🛍️ Últimas Compras</h3>
+          <ÚltimasCompras />
+        </section>
       </div>
     </div>
   )

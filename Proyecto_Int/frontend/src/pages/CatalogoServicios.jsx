@@ -13,7 +13,7 @@ function CatalogoServicios() {
 
   const categorias = useMemo(() => {
     if (!servicios.length) return [];
-    return [...new Set(servicios.map(s => s.categoria))].sort();
+    return [...new Set(servicios.map(s => s.tipo_servicio))].sort();
   }, [servicios]);
 
   const serviciosFiltrados = useMemo(() => {
@@ -22,25 +22,25 @@ function CatalogoServicios() {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(s =>
-        s.nombre.toLowerCase().includes(term) ||
+        s.tipo_servicio.toLowerCase().includes(term) ||
         s.descripcion?.toLowerCase().includes(term)
       );
     }
 
     if (selectedCategoria !== 'all') {
-      filtered = filtered.filter(s => s.categoria === selectedCategoria);
+      filtered = filtered.filter(s => s.tipo_servicio === selectedCategoria);
     }
 
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'nombre-asc':
-          return a.nombre.localeCompare(b.nombre);
+          return a.tipo_servicio.localeCompare(b.tipo_servicio);
         case 'nombre-desc':
-          return b.nombre.localeCompare(a.nombre);
+          return b.tipo_servicio.localeCompare(a.tipo_servicio);
         case 'precio-asc':
-          return parseFloat(a.precio) - parseFloat(b.precio);
+          return parseFloat(a.costo_pequeno) - parseFloat(b.costo_pequeno);
         case 'precio-desc':
-          return parseFloat(b.precio) - parseFloat(a.precio);
+          return parseFloat(b.costo_pequeno) - parseFloat(a.costo_pequeno);
         default:
           return 0;
       }
@@ -55,13 +55,46 @@ function CatalogoServicios() {
 
   const fetchServicios = async () => {
     try {
+      // Cargar catálogo de servicios con JOIN a la tabla servicio para obtener la foto
       const { data, error } = await supabase
-        .from('servicio')
-        .select('*')
-        .order('nombre');
+        .from('catalogo_servicio')
+        .select(`
+          id_catalogo,
+          tipo_servicio,
+          costo_pequeno,
+          costo_mediano,
+          costo_grande,
+          duracion,
+          descripcion,
+          disponibilidad,
+          estado_catalogo,
+          id_servicio,
+          servicio:id_servicio (
+            id_servicio,
+            nombre_servicio,
+            foto_url
+          )
+        `)
+        .eq('disponibilidad', true)
+        .order('tipo_servicio');
 
       if (error) throw error;
-      setServicios(data || []);
+      
+      // Transformar datos para compatibilidad con el resto del código
+      const serviciosTransformados = (data || []).map(item => ({
+        id: item.id_catalogo,
+        tipo_servicio: item.tipo_servicio,
+        costo_pequeno: item.costo_pequeno,
+        costo_mediano: item.costo_mediano,
+        costo_grande: item.costo_grande,
+        duracion: item.duracion,
+        descripcion: item.descripcion,
+        disponibilidad: item.disponibilidad,
+        foto_url: item.servicio?.foto_url || '/default-servicio.png', // Imagen por defecto si no hay
+        nombre_servicio: item.servicio?.nombre_servicio || item.tipo_servicio
+      }));
+      
+      setServicios(serviciosTransformados);
     } catch (error) {
       console.error('Error al cargar servicios:', error);
     } finally {
@@ -155,9 +188,14 @@ function CatalogoServicios() {
               className="servicio-card"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
+              {servicio.foto_url && (
+                <div className="servicio-imagen">
+                  <img src={servicio.foto_url} alt={servicio.tipo_servicio} />
+                </div>
+              )}
+              
               <div className="servicio-header">
-                <h3>{servicio.nombre}</h3>
-                <span className="categoria-badge">{servicio.categoria}</span>
+                <h3>{servicio.tipo_servicio}</h3>
               </div>
 
               <p className="servicio-descripcion">{servicio.descripcion}</p>
@@ -165,23 +203,28 @@ function CatalogoServicios() {
               <div className="servicio-details">
                 {servicio.duracion && (
                   <div className="detail-item">
-                    <span className="detail-icon"></span>
+                    <span className="detail-icon">⏱️</span>
                     <span>{servicio.duracion} min</span>
-                  </div>
-                )}
-                {servicio.equipo && (
-                  <div className="detail-item">
-                    <span className="detail-icon"></span>
-                    <span>{servicio.equipo}</span>
                   </div>
                 )}
               </div>
 
-              <div className="servicio-footer">
-                <div className="precio-container">
-                  <span className="precio-label">Precio</span>
-                  <span className="precio"></span>
+              <div className="precios-container">
+                <div className="precio-item">
+                  <span className="precio-label">Pequeño</span>
+                  <span className="precio">Bs. {servicio.costo_pequeno}</span>
                 </div>
+                <div className="precio-item">
+                  <span className="precio-label">Mediano</span>
+                  <span className="precio">Bs. {servicio.costo_mediano}</span>
+                </div>
+                <div className="precio-item">
+                  <span className="precio-label">Grande</span>
+                  <span className="precio">Bs. {servicio.costo_grande}</span>
+                </div>
+              </div>
+
+              <div className="servicio-footer">
                 <button
                   className="btn-reservar"
                   onClick={() => abrirReserva(servicio)}

@@ -1,353 +1,339 @@
-import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState, useEffect, useContext } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { VETERINARIA_INFO, DOCTORES_EJEMPLO, TESTIMONIOS_EJEMPLO, BLOGS_EJEMPLO } from '../lib/veterinariaData'
 import { supabase } from '../lib/supabaseClient'
-import supabaseServices from '../services/supabase'
+import HomeStats from '../components/HomeStats'
 import './Home.css'
+import { AuthContext } from '../contexts/AuthContext'
 
 const Home = () => {
-  const [stats, setStats] = useState({
-    mascotas: 0,
-    servicios: 0,
-    doctores: 0,
-    productos: 0
-  })
-  const [serviciosDestacados, setServiciosDestacados] = useState([])
-  const [productosDestacados, setProductosDestacados] = useState([])
-  const [articulosRecientes, setArticulosRecientes] = useState([])
-  const [doctores, setDoctores] = useState([])
-  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
+  const { user } = useContext(AuthContext)
+  const [doctores] = useState(DOCTORES_EJEMPLO)
+  const [testimonios] = useState(TESTIMONIOS_EJEMPLO)
+  const [blogs] = useState(BLOGS_EJEMPLO)
+  const [showModal, setShowModal] = useState(false)
+  const [selectedDoctor, setSelectedDoctor] = useState(null)
 
-  useEffect(() => {
-    cargarDatosHome()
-  }, [])
-
-  const cargarDatosHome = async () => {
-    try {
-      setLoading(true)
-
-      // Cargar estadísticas
-      const [mascotas, servicios, doctoresData, productos] = await Promise.all([
-        supabase.from('mascota').select('*', { count: 'exact', head: true }),
-        supabase.from('servicio').select('*', { count: 'exact', head: true }),
-        supabase.from('personal').select('*', { count: 'exact', head: true }).eq('estado', 'activo'),
-        supabase.from('producto').select('*', { count: 'exact', head: true })
-      ])
-
-      setStats({
-        mascotas: mascotas.count || 0,
-        servicios: servicios.count || 0,
-        doctores: doctoresData.count || 0,
-        productos: productos.count || 0
-      })
-
-      // Cargar servicios destacados (primeros 4)
-      const serviciosData = await supabaseServices.servicios.getAll()
-      setServiciosDestacados(serviciosData.slice(0, 4))
-
-      // Cargar productos destacados (primeros 4)
-      const productosData = await supabaseServices.productos.getAll()
-      setProductosDestacados(productosData.slice(0, 4))
-
-      // Cargar artículos recientes (primeros 3)
-      const articulosData = await supabaseServices.articulos.getAll()
-      setArticulosRecientes(articulosData.slice(0, 3))
-
-      // Cargar doctores (primeros 3)
-      const doctoresCompletos = await supabaseServices.doctores.getAll()
-      setDoctores(doctoresCompletos.slice(0, 3))
-
-      setLoading(false)
-    } catch (err) {
-      console.error('Error cargando datos del home:', err)
-      setLoading(false)
-    }
+  const abrirGoogleMaps = () => {
+    window.open(VETERINARIA_INFO.ubicacion.mapa_url, '_blank')
   }
 
-  if (loading) {
-    return (
-      <div className="home-loading">
-        <div className="spinner-large"></div>
-        <p>Cargando VetCare...</p>
-      </div>
-    )
+  const llamarDoctor = (telefono) => {
+    window.location.href = `tel:${telefono}`
+  }
+
+  const enviarWhatsApp = (telefono, nombre) => {
+    const mensaje = encodeURIComponent(`Hola, me gustaría comunicarme con ${nombre} sobre mis mascotas.`)
+    window.open(`https://wa.me/${telefono.replace(/\D/g, '').slice(-10)}?text=${mensaje}`, '_blank')
+  }
+
+  const enviarCorreo = (email, nombre) => {
+    const subject = encodeURIComponent('Consulta VetCare')
+    const body = encodeURIComponent(`Hola Dr./Dra. ${nombre},\n\nMe gustaría comunicarme sobre mis mascotas.\n\nGracias.`)
+    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`
+  }
+
+  const seleccionarDoctor = (doctor) => {
+    setSelectedDoctor(doctor)
+    setShowModal(true)
   }
 
   return (
     <div className="home-page">
-      {/* SECCIÓN TEMPORAL - NAVEGACIÓN AL PORTAL DE PERSONAL */}
-      <section style={{
-        background: 'linear-gradient(135deg, #5DADE2, #85C1E9)',
-        padding: '2rem',
-        borderRadius: '1rem',
-        margin: '2rem',
-        color: 'white'
-      }}>
-        <h2 style={{ marginBottom: '1rem', fontSize: '2rem' }}>🔧 Navegación Temporal - Portal de Personal</h2>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '1rem',
-          marginTop: '1.5rem'
-        }}>
-          <Link to="/dashboard-personal" style={{
-            background: 'white',
-            color: '#2C3E50',
-            padding: '1.5rem',
-            borderRadius: '0.8rem',
-            textDecoration: 'none',
-            fontWeight: '600',
-            transition: 'all 0.3s ease',
-            textAlign: 'center'
-          }}>
-            👨‍⚕️ Dashboard Personal
-          </Link>
-          <Link to="/mis-reservas" style={{
-            background: 'white',
-            color: '#2C3E50',
-            padding: '1.5rem',
-            borderRadius: '0.8rem',
-            textDecoration: 'none',
-            fontWeight: '600',
-            transition: 'all 0.3s ease',
-            textAlign: 'center'
-          }}>
-            📋 Mis Reservas
-          </Link>
-          <Link to="/historial-medico-personal" style={{
-            background: 'white',
-            color: '#2C3E50',
-            padding: '1.5rem',
-            borderRadius: '0.8rem',
-            textDecoration: 'none',
-            fontWeight: '600',
-            transition: 'all 0.3s ease',
-            textAlign: 'center'
-          }}>
-            🏥 Historial Médico
-          </Link>
-          <Link to="/recetas-tratamientos" style={{
-            background: 'white',
-            color: '#2C3E50',
-            padding: '1.5rem',
-            borderRadius: '0.8rem',
-            textDecoration: 'none',
-            fontWeight: '600',
-            transition: 'all 0.3s ease',
-            textAlign: 'center'
-          }}>
-            💊 Recetas y Tratamientos
-          </Link>
-          <Link to="/gestion-blog" style={{
-            background: 'white',
-            color: '#2C3E50',
-            padding: '1.5rem',
-            borderRadius: '0.8rem',
-            textDecoration: 'none',
-            fontWeight: '600',
-            transition: 'all 0.3s ease',
-            textAlign: 'center'
-          }}>
-            📝 Gestión de Blog
-          </Link>
-          <Link to="/chat-personal" style={{
-            background: 'white',
-            color: '#2C3E50',
-            padding: '1.5rem',
-            borderRadius: '0.8rem',
-            textDecoration: 'none',
-            fontWeight: '600',
-            transition: 'all 0.3s ease',
-            textAlign: 'center'
-          }}>
-            💬 Chat Personal
-          </Link>
-          <Link to="/mis-horarios" style={{
-            background: 'white',
-            color: '#2C3E50',
-            padding: '1.5rem',
-            borderRadius: '0.8rem',
-            textDecoration: 'none',
-            fontWeight: '600',
-            transition: 'all 0.3s ease',
-            textAlign: 'center'
-          }}>
-            🗓️ Mis Horarios
-          </Link>
-        </div>
-        <p style={{ marginTop: '1.5rem', fontSize: '0.9rem', opacity: '0.9' }}>
-          ⚠️ Estas páginas requieren autenticación. Si no tienes un usuario de personal configurado, 
-          verás un mensaje de error. Las tablas necesarias: personal (con user_id), horario_personal, 
-          conversaciones_personal, mensajes_personal.
-        </p>
-      </section>
-
-      {/* Hero Section Mejorado */}
-      <section className="hero-home">
-        <div className="hero-background"></div>
+      {/* HERO SECTION */}
+      <section className="hero">
         <div className="hero-content">
-          <span className="hero-badge">🐾 #1 en Cuidado Veterinario</span>
-          <h1 className="hero-title">
-            Bienvenido a <span className="brand-highlight">VetCare</span>
-          </h1>
-          <p className="hero-description">
-            Cuidamos a tus mascotas con cariño y profesionalismo. Servicios integrales, 
-            vacunación y productos seleccionados para su bienestar.
-          </p>
-          <div className="hero-actions">
-            <Link to="/reservas" className="btn-hero btn-primary">
-              📅 Reservar Cita Ahora
-            </Link>
-            <Link to="/catalogo-productos" className="btn-hero btn-secondary">
-              🛍️ Ver Tienda
-            </Link>
-          </div>
-          <div className="hero-stats">
-            <div className="stat-item">
-              <div className="stat-icon">🐾</div>
-              <h3>{stats.mascotas}+</h3>
-              <p>Mascotas felices</p>
+          <h1 className="hero-title">🏥 Bienvenido a VetCare</h1>
+          <p className="hero-subtitle">Cuidado integral para tus mascotas con profesionales de confianza</p>
+          {!user && (
+            <div className="hero-buttons">
+              <button className="btn-primary" onClick={() => navigate('/registrar')}>
+                Registrarse Ahora
+              </button>
+              <button className="btn-secondary" onClick={() => navigate('/iniciar-sesion')}>
+                Iniciar Sesión
+              </button>
             </div>
-            <div className="stat-item">
-              <div className="stat-icon">⚕️</div>
-              <h3>{stats.servicios}+</h3>
-              <p>Servicios disponibles</p>
-            </div>
-            <div className="stat-item">
-              <div className="stat-icon">👨‍⚕️</div>
-              <h3>{stats.doctores}+</h3>
-              <p>Profesionales</p>
-            </div>
-            <div className="stat-item">
-              <div className="stat-icon">🛒</div>
-              <h3>{stats.productos}+</h3>
-              <p>Productos</p>
-            </div>
-          </div>
+          )}
         </div>
+        <div className="hero-image">🐾🐕🐱</div>
       </section>
 
-      {/* Servicios Destacados */}
-      <section className="section-destacados">
-        <div className="section-header">
-          <h2>🏥 Servicios Destacados</h2>
-          <Link to="/catalogo-servicios" className="view-all-link">Ver todos →</Link>
+      {/* SECCIÓN ESTADÍSTICAS */}
+      <section className="estadisticas-section">
+        <h2>📊 VetCare en Números</h2>
+        <HomeStats />
+      </section>
+
+      {/* SECCIÓN EMERGENCIA */}
+      <section className="emergencia-section">
+        <div className="emergencia-header">
+          <h2>🆘 ¿EMERGENCIA?</h2>
+          <p>Llámanos inmediatamente - Disponible 24/7</p>
         </div>
-        <div className="grid-4">
-          {serviciosDestacados.map((servicio, index) => (
-            <div key={servicio.id_servicio} className="preview-card" style={{ animationDelay: `${index * 0.1}s` }}>
-              <div className="card-icon-large">🏥</div>
-              <h3>{servicio.nombre_servicio}</h3>
-              <p className="card-description">{servicio.descripcion?.substring(0, 80) || 'Servicio profesional'}...</p>
-              <div className="card-footer">
-                <span className="price-tag">
-                  ${servicio.precio_base?.toFixed(2) || '0.00'}
-                </span>
-                <Link to="/reservas" className="btn-card">
-                  Reservar
-                </Link>
+        <div className="emergencia-buttons">
+          {VETERINARIA_INFO.telefonos_emergencia.map((tel, idx) => (
+            <div key={idx} className="emergencia-card">
+              <p className="emergencia-tipo">{tel.tipo}</p>
+              <p className="emergencia-numero">{tel.numero}</p>
+              <div className="emergencia-actions">
+                <button className="btn-call" onClick={() => llamarDoctor(tel.numero)}>
+                  📞 Llamar
+                </button>
+                <button className="btn-whatsapp" onClick={() => enviarWhatsApp(tel.numero, 'VetCare')}>
+                  💬 WhatsApp
+                </button>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Productos Destacados */}
-      <section className="section-destacados bg-alt">
-        <div className="section-header">
-          <h2>🛍️ Productos Destacados</h2>
-          <Link to="/catalogo-productos" className="view-all-link">Ver todos →</Link>
+      {/* SECCIÓN UBICACIÓN */}
+      <section className="ubicacion-section">
+        <div className="ubicacion-info">
+          <h2>📍 Nuestra Ubicación</h2>
+          <p className="ubicacion-direccion">{VETERINARIA_INFO.ubicacion.direccion}</p>
+          <div className="horarios">
+            <div className="horario-item">
+              <span className="horario-dia">Lunes - Viernes:</span>
+              <span className="horario-hora">{VETERINARIA_INFO.horarios.lunes_viernes}</span>
+            </div>
+            <div className="horario-item">
+              <span className="horario-dia">Sábado:</span>
+              <span className="horario-hora">{VETERINARIA_INFO.horarios.sabado}</span>
+            </div>
+            <div className="horario-item">
+              <span className="horario-dia">Domingo:</span>
+              <span className="horario-hora">{VETERINARIA_INFO.horarios.domingo}</span>
+            </div>
+            <div className="horario-item emergencia-horario">
+              <span className="horario-dia">🚑 Emergencia:</span>
+              <span className="horario-hora">{VETERINARIA_INFO.horarios.emergencia}</span>
+            </div>
+          </div>
+          <button className="btn-maps" onClick={abrirGoogleMaps}>
+            📍 Abrir en Google Maps
+          </button>
         </div>
-        <div className="grid-4">
-          {productosDestacados.map((producto, index) => (
-            <div key={producto.id_producto} className="preview-card" style={{ animationDelay: `${index * 0.1}s` }}>
-              <div className="product-image">
-                {producto.imagen ? (
-                  <img src={producto.imagen} alt={producto.nombre_producto} />
-                ) : (
-                  <div className="image-placeholder">📦</div>
-                )}
+        <div className="ubicacion-map-placeholder">
+          <div className="map-icon">🗺️</div>
+          <p>Haz clic en "Abrir en Google Maps" para ver nuestra ubicación exacta</p>
+        </div>
+      </section>
+
+      {/* SECCIÓN DOCTORES */}
+      <section className="doctores-section">
+        <h2>👨‍⚕️ Nuestro Equipo Médico</h2>
+        <p className="section-subtitle">Profesionales altamente capacitados listos para cuidar a tu mascota</p>
+        
+        <div className="doctores-grid">
+          {doctores.map((doctor) => (
+            <div key={doctor.id_personal} className="doctor-card">
+              <div className="doctor-header">
+                <div className="doctor-avatar">{doctor.imagen}</div>
+                {doctor.disponible && <span className="badge-disponible">✓ Disponible</span>}
               </div>
-              <h3>{producto.nombre_producto}</h3>
-              <p className="categoria-tag">{producto.categoria}</p>
-              <div className="card-footer">
-                <span className="price-tag">
-                  ${producto.precio?.toFixed(2) || '0.00'}
-                </span>
-                <Link to="/catalogo-productos" className="btn-card">
-                  Ver más
-                </Link>
+              
+              <h3 className="doctor-nombre">
+                {doctor.nombre_personal} {doctor.primer_apellido}
+              </h3>
+              
+              <p className="doctor-especialidad">{doctor.especialidad}</p>
+              
+              <div className="doctor-rating">
+                <span className="stars">⭐ {doctor.calificacion}</span>
+                <span className="resenas">({doctor.resenas} reseñas)</span>
+              </div>
+              
+              <p className="doctor-descripcion">{doctor.descripcion}</p>
+              
+              <div className="doctor-actions">
+                <button 
+                  className="btn-info"
+                  onClick={() => seleccionarDoctor(doctor)}
+                >
+                  📋 Más Información
+                </button>
+                <button 
+                  className="btn-contactar"
+                  onClick={() => llamarDoctor(doctor.telefono_personal)}
+                >
+                  📞 Llamar
+                </button>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Nuestro Equipo */}
-      <section className="section-destacados">
-        <div className="section-header">
-          <h2>👨‍⚕️ Conoce a Nuestro Equipo</h2>
-          <Link to="/doctores" className="view-all-link">Ver todos →</Link>
-        </div>
-        <div className="grid-3">
-          {doctores.map((doctor, index) => {
-            const iniciales = `${doctor.primer_nombre?.[0] || ''}${doctor.primer_apellido?.[0] || ''}`
-            const nombreCompleto = `${doctor.primer_nombre || ''} ${doctor.primer_apellido || ''}`.trim()
-            
-            return (
-              <div key={doctor.ci_personal} className="doctor-preview-card" style={{ animationDelay: `${index * 0.1}s` }}>
-                <div className="doctor-avatar-preview">
-                  <div className="avatar-circle-preview">{iniciales}</div>
+      {/* SECCIÓN TESTIMONIOS */}
+      <section className="testimonios-section">
+        <h2>💬 Lo que dicen nuestros clientes</h2>
+        <div className="testimonios-grid">
+          {testimonios.map((testimonio) => (
+            <div key={testimonio.id} className="testimonio-card">
+              <div className="testimonio-header">
+                <div className="testimonio-stars">
+                  {'⭐'.repeat(testimonio.calificacion)}
                 </div>
-                <h3>{nombreCompleto}</h3>
-                <p className="doctor-role">{doctor.funcion || 'Veterinario'}</p>
-                <Link to="/doctores" className="btn-card">
-                  Ver perfil
-                </Link>
+                <span className="testimonio-fecha">{testimonio.fecha}</span>
               </div>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* Blog Reciente */}
-      <section className="section-destacados bg-alt">
-        <div className="section-header">
-          <h2>📰 Últimas Noticias del Blog</h2>
-          <Link to="/articulos-blog" className="view-all-link">Ver todos →</Link>
-        </div>
-        <div className="grid-3">
-          {articulosRecientes.map((articulo, index) => (
-            <div key={articulo.id_articulo} className="blog-preview-card" style={{ animationDelay: `${index * 0.1}s` }}>
-              <div className="blog-date">
-                📅 {new Date(articulo.fecha_publicacion).toLocaleDateString('es-ES')}
+              
+              <p className="testimonio-comentario">"{testimonio.comentario}"</p>
+              
+              <div className="testimonio-autor">
+                <p className="autor-nombre">- {testimonio.nombre}</p>
+                <p className="autor-mascota">Mascota: {testimonio.mascota}</p>
               </div>
-              <h3>{articulo.titulo}</h3>
-              <p className="blog-excerpt">
-                {articulo.contenido?.substring(0, 120) || 'Contenido del artículo'}...
-              </p>
-              <Link to="/articulos-blog" className="btn-card">
-                Leer más
-              </Link>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Call to Action Final */}
-      <section className="cta-section">
-        <div className="cta-content">
-          <h2>¿Listo para cuidar mejor a tu mascota?</h2>
-          <p>Únete a nuestra comunidad de dueños responsables</p>
-          <div className="cta-buttons">
-            <Link to="/registrar" className="btn-cta btn-white">
-              Crear Cuenta Gratis
-            </Link>
-            <Link to="/catalogo-servicios" className="btn-cta btn-outline-white">
-              Ver Servicios
-            </Link>
+      {/* SECCIÓN SERVICIOS */}
+      <section className="servicios-section">
+        <h2>🏥 Nuestros Servicios</h2>
+        <div className="servicios-grid">
+          {VETERINARIA_INFO.servicios_principales.map((servicio, idx) => (
+            <div key={idx} className="servicio-card">
+              <div className="servicio-icon">
+                {idx === 0 && '🩺'}
+                {idx === 1 && '🔪'}
+                {idx === 2 && '💉'}
+                {idx === 3 && '🧪'}
+                {idx === 4 && '📸'}
+                {idx === 5 && '🚑'}
+              </div>
+              <h3>{servicio}</h3>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* SECCIÓN BLOGS */}
+      <section className="blogs-section">
+        <h2>📚 Blog de Salud Animal</h2>
+        <p className="section-subtitle">Consejos y artículos de nuestros expertos</p>
+        
+        <div className="blogs-grid">
+          {blogs.map((blog) => (
+            <div key={blog.id} className="blog-card">
+              <div className="blog-image">{blog.imagen}</div>
+              <div className="blog-content">
+                <h3>{blog.titulo}</h3>
+                <p>{blog.resumen}</p>
+                <div className="blog-meta">
+                  <span className="blog-autor">Por {blog.autor}</span>
+                  <span className="blog-fecha">{new Date(blog.fecha).toLocaleDateString('es-ES')}</span>
+                </div>
+                <button className="btn-leer-mas" onClick={() => navigate('/articulos-blog')}>
+                  Leer más →
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* SECCIÓN CONTACTO */}
+      <section className="contacto-section">
+        <h2>📧 Contáctanos</h2>
+        <div className="contacto-grid">
+          <div className="contacto-card">
+            <h3>📞 Teléfono</h3>
+            <p>{VETERINARIA_INFO.telefono_principal}</p>
+            <button className="btn-contact" onClick={() => llamarDoctor(VETERINARIA_INFO.telefono_principal)}>
+              Llamar
+            </button>
+          </div>
+          
+          <div className="contacto-card">
+            <h3>📧 Correo</h3>
+            <p>{VETERINARIA_INFO.correo}</p>
+            <button className="btn-contact" onClick={() => enviarCorreo(VETERINARIA_INFO.correo, 'VetCare')}>
+              Enviar Email
+            </button>
+          </div>
+          
+          <div className="contacto-card">
+            <h3>🚑 Emergencia</h3>
+            <p>{VETERINARIA_INFO.correo_emergencia}</p>
+            <button className="btn-contact" onClick={() => enviarCorreo(VETERINARIA_INFO.correo_emergencia, 'VetCare')}>
+              Reportar Emergencia
+            </button>
           </div>
         </div>
       </section>
+
+      {/* FOOTER CTA */}
+      {!user && (
+        <section className="footer-cta">
+          <h2>¿Eres un cliente nuevo?</h2>
+          <p>Regístrate hoy y accede a todos nuestros servicios</p>
+          <button className="btn-registro-grande" onClick={() => navigate('/registrar')}>
+            🚀 Comenzar Ahora
+          </button>
+        </section>
+      )}
+
+      {/* MODAL DOCTOR */}
+      {showModal && selectedDoctor && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
+            
+            <div className="modal-header">
+              <div className="modal-avatar">{selectedDoctor.imagen}</div>
+              <h2>{selectedDoctor.nombre_personal} {selectedDoctor.primer_apellido}</h2>
+              <p className="modal-especialidad">{selectedDoctor.especialidad}</p>
+            </div>
+            
+            <div className="modal-body">
+              <div className="info-block">
+                <h4>Acerca del Doctor</h4>
+                <p>{selectedDoctor.descripcion}</p>
+              </div>
+              
+              <div className="info-block">
+                <h4>Contacto</h4>
+                <p>📞 {selectedDoctor.telefono_personal}</p>
+                <p>📧 {selectedDoctor.correo_personal}</p>
+              </div>
+              
+              <div className="info-block">
+                <h4>Calificación</h4>
+                <div className="rating-display">
+                  <span>⭐ {selectedDoctor.calificacion}</span>
+                  <span>({selectedDoctor.resenas} reseñas)</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="modal-footer">
+              <button 
+                className="btn-modal-primary"
+                onClick={() => llamarDoctor(selectedDoctor.telefono_personal)}
+              >
+                📞 Llamar
+              </button>
+              <button 
+                className="btn-modal-secondary"
+                onClick={() => enviarWhatsApp(selectedDoctor.telefono_personal, selectedDoctor.nombre_personal)}
+              >
+                💬 WhatsApp
+              </button>
+              <button 
+                className="btn-modal-secondary"
+                onClick={() => enviarCorreo(selectedDoctor.correo_personal, selectedDoctor.nombre_personal)}
+              >
+                📧 Email
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

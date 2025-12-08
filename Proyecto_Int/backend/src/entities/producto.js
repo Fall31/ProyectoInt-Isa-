@@ -1,11 +1,30 @@
 class Producto {
-  constructor({ id_producto, nombre_producto, precio, imagen, descripcion } = {}) {
+  constructor({
+    id_producto,
+    nombre_producto,
+    categoria,
+    precio,
+    descripcion,
+    marca,
+    imagen,
+    fecha_vencimiento,
+    lote,
+    tipo,
+    id_proveedor,
+    id_catalogo
+  } = {}) {
     this.id_producto = id_producto || null
     this.nombre_producto = nombre_producto || ''
-    // dejar precio undefined/null si no está provisto para que la validación lo detecte
+    this.categoria = categoria || ''
     this.precio = (precio === undefined) ? null : precio
-    this.imagen = imagen || ''
     this.descripcion = descripcion || ''
+    this.marca = marca || ''
+    this.imagen = imagen || null
+    this.fecha_vencimiento = fecha_vencimiento || null
+    this.lote = lote || ''
+    this.tipo = tipo || ''
+    this.id_proveedor = id_proveedor || null
+    this.id_catalogo = id_catalogo || null
   }
 
   validate() {

@@ -1,11 +1,26 @@
 const express = require('express')
 const cors = require('cors')
+const multer = require('multer')
 
 const { supabase } = require('./src/lib/supabaseClient')
 
 const app = express()
 app.use(cors())
 app.use(express.json())
+
+// Configurar multer para archivos en memoria
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB máximo
+  fileFilter: (req, file, cb) => {
+    const tiposPermitidos = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    if (tiposPermitidos.includes(file.mimetype)) {
+      cb(null, true)
+    } else {
+      cb(new Error('Solo se permiten imágenes (JPEG, PNG, GIF, WebP)'))
+    }
+  }
+})
 
 app.get('/', (req, res) => {
   res.send('Servidor backend funcionando 🚀')
@@ -16,59 +31,9 @@ app.get('/api/saludo', (req, res) => {
   res.json({ mensaje: 'Hola desde el backend de JavaScript' })
 })
 
-// --- Endpoints para la tabla 'cliente' ---
-// POST /api/cliente -> insertar un cliente
-// Body esperado (ejemplo): { nombre: 'Ana', email: 'ana@ejemplo.com', telefono: '12345678' }
-app.post('/api/cliente', async (req, res) => {
-  try {
-    const payload = req.body
-    if (!payload || Object.keys(payload).length === 0) {
-      return res.status(400).json({ error: 'Body vacío. Enviar los datos a insertar.' })
-    }
-
-    // Si el cliente envía ci_cliente que es un UUID (user id de Supabase), mapearlo a user_id
-    // Para mayor compatibilidad, aceptamos user_id directamente o lo inferimos desde ci_cliente
-    const body = { ...payload }
-    const maybe = String(body.ci_cliente || '')
-    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89ABab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/
-    if (maybe && uuidRegex.test(maybe)) {
-      body.user_id = maybe
-      // Eliminamos ci_cliente para evitar que se inserte en la columna ci_cliente
-      // (ci_cliente en la tabla original es VARCHAR(20) y truncaría/causaría error)
-      // pero si la tabla requiere ci_cliente (PK NOT NULL), dejamos ci_cliente igual al uuid
-      // para mantener compatibilidad: copiamos user_id en ci_cliente si no existe
-      if (!body.ci_cliente) {
-        body.ci_cliente = maybe
-      }
-    }
-
-    const { data, error } = await supabase.from('cliente').insert([body])
-
-    if (error) {
-      console.error('Supabase insert error:', error)
-      return res.status(500).json({ error: error.message })
-    }
-
-    res.status(201).json({ inserted: data })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error interno' })
-  }
-})
-
-// GET /api/cliente -> listar clientes (paginación mínima)
-app.get('/api/cliente', async (req, res) => {
-  try {
-    const { data, error } = await supabase.from('cliente').select('*').limit(100)
-    if (error) {
-      console.error('Supabase select error:', error)
-      return res.status(500).json({ error: error.message })
-    }
-    res.json({ clientes: data })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error interno' })
-  }
+// --- ENDPOINTS PÚBLICOS SIMPLES PARA TEST ---
+app.get('/api/public/test', (req, res) => {
+  res.json({ status: 'ok', mensaje: 'Endpoints públicos funcionando' })
 })
 
 // --- Endpoints para PRODUCTOS ---
@@ -117,6 +82,9 @@ const clienteController = require('./src/controllers/clienteController')
 // Delegar rutas de cliente al controller (separación de capas)
 app.post('/api/cliente', clienteController.createCliente)
 app.get('/api/cliente', clienteController.getClientes)
+app.get('/api/cliente/:user_id', clienteController.getClienteByUserId)
+app.put('/api/cliente/:ci_cliente', clienteController.updateCliente)
+
 // --- Endpoints para CHATBOT ---
 app.post('/api/chatbot/mensaje', async (req, res) => {
   try {
@@ -230,6 +198,114 @@ app.post('/api/mascotas', mascotaController.createMascota)
 app.put('/api/mascotas/:ci_mascota', mascotaController.updateMascota)
 app.delete('/api/mascotas/:ci_mascota', mascotaController.deleteMascota)
 
+// --- Endpoints para IMÁGENES ---
+
+// Controllers de imagen
+const imagenClienteController = require('./src/controllers/imagenClienteController')
+const imagenMascotaController = require('./src/controllers/imagenMascotaController')
+const imagenProductoController = require('./src/controllers/imagenProductoController')
+const imagenServicioController = require('./src/controllers/imagenServicioController')
+const imagenDoctorController = require('./src/controllers/imagenDoctorController')
+
+// Rutas para subir/eliminar imágenes de Cliente
+app.post('/api/imagen/cliente/subir', upload.single('imagen'), imagenClienteController.subirImagenCliente)
+app.delete('/api/imagen/cliente/eliminar', imagenClienteController.eliminarImagenCliente)
+
+// Rutas para subir/eliminar imágenes de Mascota
+app.post('/api/imagen/mascota/subir', upload.single('imagen'), imagenMascotaController.subirImagenMascota)
+app.delete('/api/imagen/mascota/eliminar', imagenMascotaController.eliminarImagenMascota)
+
+// Rutas para subir/eliminar imágenes de Producto
+app.post('/api/imagen/producto/subir', upload.single('imagen'), imagenProductoController.subirImagenProducto)
+app.delete('/api/imagen/producto/eliminar', imagenProductoController.eliminarImagenProducto)
+
+// Rutas para subir/eliminar imágenes de Servicio
+app.post('/api/imagen/servicio/subir', upload.single('imagen'), imagenServicioController.subirImagenServicio)
+app.delete('/api/imagen/servicio/eliminar', imagenServicioController.eliminarImagenServicio)
+
+// Rutas para subir/eliminar imágenes de Doctor
+app.post('/api/imagen/doctor/subir', upload.single('imagen'), imagenDoctorController.subirImagenDoctor)
+app.delete('/api/imagen/doctor/eliminar', imagenDoctorController.eliminarImagenDoctor)
+
+// --- Endpoints PÚBLICOS para HOME PAGE ---
+
+// Obtener doctores para página pública
+app.get('/api/public/doctores', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('personal')
+      .select('*')
+      .eq('estado', 'activo')
+      .limit(4)
+    
+    if (error) return res.status(400).json({ error: error.message })
+    res.json(data || [])
+  } catch (err) {
+    console.error('Error:', err)
+    res.status(500).json({ error: 'Error obteniendo doctores' })
+  }
+})
+
+// Obtener estadísticas generales
+app.get('/api/public/estadisticas', async (req, res) => {
+  try {
+    const [
+      { count: mascotasCount },
+      { count: doctoresCount },
+      { count: serviciosCount },
+      { count: productosCount }
+    ] = await Promise.all([
+      supabase.from('mascota').select('*', { count: 'exact', head: true }),
+      supabase.from('personal').select('*', { count: 'exact', head: true }).eq('estado', 'activo'),
+      supabase.from('servicio').select('*', { count: 'exact', head: true }),
+      supabase.from('producto').select('*', { count: 'exact', head: true })
+    ])
+
+    res.json({
+      mascotas: mascotasCount || 0,
+      doctores: doctoresCount || 0,
+      servicios: serviciosCount || 0,
+      productos: productosCount || 0
+    })
+  } catch (err) {
+    console.error('Error:', err)
+    res.status(500).json({ error: 'Error obteniendo estadísticas' })
+  }
+})
+
+// Obtener artículos de blog
+app.get('/api/public/blogs', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('articulos_blog')
+      .select('*')
+      .eq('estado', 'publicado')
+      .order('fecha_publicacion', { ascending: false })
+      .limit(3)
+    
+    if (error) return res.status(400).json({ error: error.message })
+    res.json(data || [])
+  } catch (err) {
+    console.error('Error:', err)
+    res.status(500).json({ error: 'Error obteniendo blogs' })
+  }
+})
+
+// Obtener servicios para página pública
+app.get('/api/public/servicios', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('servicio')
+      .select('*')
+      .limit(6)
+    
+    if (error) return res.status(400).json({ error: error.message })
+    res.json(data || [])
+  } catch (err) {
+    console.error('Error:', err)
+    res.status(500).json({ error: 'Error obteniendo servicios' })
+  }
+})
 
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => console.log(`Servidor corriendo en http://localhost:${PORT}`))

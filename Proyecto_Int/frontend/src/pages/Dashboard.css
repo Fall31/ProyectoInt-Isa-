@@ -492,7 +492,8 @@
   }
 
   .mascotas-section,
-  .reservas-section {
+  .reservas-section,
+  .compras-section {
     padding: 1.5rem;
   }
 
@@ -502,5 +503,260 @@
 
   .action-icon {
     font-size: 2.5rem;
+  }
+}
+
+/* ==================== ÚLTIMAS COMPRAS ==================== */
+
+.ultimas-compras {
+  background: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.ultimas-compras h3 {
+  margin-top: 0;
+  color: #333;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ESTADÍSTICAS */
+.compras-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.stat-item {
+  padding: 1.2rem;
+  border-radius: 0.8rem;
+  text-align: center;
+  background: linear-gradient(135deg, #f5f7fa 0%, #f0f3f7 100%);
+  border: 1px solid #e0e6ed;
+  transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.stat-item.stat-total {
+  background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+  border-color: #90CAF9;
+}
+
+.stat-item.stat-pagada {
+  background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+  border-color: #81C784;
+}
+
+.stat-item.stat-pendiente {
+  background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+  border-color: #FFB74D;
+}
+
+.stat-item.stat-gasto {
+  background: linear-gradient(135deg, #FCE4EC 0%, #F8BBD0 100%);
+  border-color: #F48FB1;
+}
+
+.stat-number {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+/* LISTA DE FACTURAS */
+.facturas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.factura-mini {
+  display: grid;
+  grid-template-columns: 100px 1fr 120px 80px;
+  align-items: center;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  border: 1px solid #e5e7eb;
+  border-radius: 0.7rem;
+  transition: all 0.3s ease;
+}
+
+.factura-mini:hover {
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  border-color: #5DADE2;
+  box-shadow: 0 4px 12px rgba(93, 173, 226, 0.15);
+  transform: translateX(3px);
+}
+
+.factura-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.factura-id {
+  font-weight: 700;
+  color: #5DADE2;
+  font-size: 1rem;
+}
+
+.factura-fecha {
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.factura-middle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.factura-metodo {
+  font-size: 0.85rem;
+  background: #E3F2FD;
+  color: #1976D2;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.factura-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+}
+
+.factura-total {
+  font-weight: 700;
+  color: #333;
+  font-size: 1.05rem;
+}
+
+.factura-estado {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+}
+
+.factura-estado.estado-pagada {
+  background: #E8F5E9;
+  color: #2E7D32;
+}
+
+.factura-estado.estado-pendiente {
+  background: #FFF3E0;
+  color: #E65100;
+}
+
+.btn-factura-mini {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  padding: 0.3rem;
+}
+
+.btn-factura-mini:hover {
+  transform: scale(1.2);
+}
+
+/* ESTADO VACÍO */
+.empty-compras {
+  text-align: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #F0F9FF 0%, #E8F4F8 100%);
+  border-radius: 1rem;
+  border: 2px dashed #5DADE2;
+  margin-bottom: 1rem;
+}
+
+.empty-compras p {
+  font-size: 1.1rem;
+  color: #666;
+  margin-bottom: 1rem;
+}
+
+.btn-comprar {
+  background: linear-gradient(135deg, #5DADE2 0%, #2E86C1 100%);
+  color: white;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-comprar:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(93, 173, 226, 0.4);
+}
+
+/* BOTÓN VER TODAS */
+.btn-ver-todas {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, #5DADE2 0%, #2E86C1 100%);
+  color: white;
+  border: none;
+  border-radius: 0.7rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.btn-ver-todas:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(93, 173, 226, 0.4);
+}
+
+@media (max-width: 768px) {
+  .compras-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .factura-mini {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+
+  .factura-left,
+  .factura-middle,
+  .factura-right {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .btn-factura-mini {
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
   }
 }
