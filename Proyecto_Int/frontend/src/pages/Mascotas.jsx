@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import './Mascotas.css'
+import supabaseServices from '../services/supabase'
 
 const Mascotas = () => {
   const navigate = useNavigate()
@@ -12,6 +13,9 @@ const Mascotas = () => {
   const [clienteData, setClienteData] = useState(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imagePreview, setImagePreview] = useState(null)
+  const [vacunasVisibles, setVacunasVisibles] = useState(null)
+  const [vacunasLista, setVacunasLista] = useState([])
+  const [alertasVacunas, setAlertasVacunas] = useState([])
   
   const [formData, setFormData] = useState({
     nombre_mascota: '',
@@ -202,6 +206,32 @@ const Mascotas = () => {
     } catch (error) {
       console.error('Error eliminando mascota:', error)
       alert('Error al eliminar: ' + error.message)
+    }
+  }
+
+  const abrirVacunas = async (mascota) => {
+    try {
+      setVacunasVisibles(mascota)
+      // Cargar vacunas aplicadas usando servicio supabase
+      const data = await supabaseServices.vacunas.getByMascota(mascota.ci_mascota)
+      const vacunas = data || []
+      setVacunasLista(vacunas)
+
+      // Generar alertas: próximas vacunas dentro de 7 días
+      const hoy = new Date()
+      const sieteDias = 7 * 24 * 60 * 60 * 1000
+      const alertas = vacunas
+        .filter(v => v.fecha_proxima)
+        .map(v => ({
+          ...v,
+          diff: new Date(v.fecha_proxima).getTime() - hoy.getTime()
+        }))
+        .filter(v => v.diff > 0 && v.diff <= sieteDias)
+        .sort((a,b) => a.diff - b.diff)
+      setAlertasVacunas(alertas)
+    } catch (err) {
+      console.error('Error cargando vacunas:', err)
+      alert('No se pudieron cargar las vacunas: ' + err.message)
     }
   }
 
@@ -429,6 +459,9 @@ const Mascotas = () => {
                   >
                     📋 Historial
                   </button>
+                  <button onClick={() => abrirVacunas(mascota)} className="btn-history">
+                    💉 Vacunas
+                  </button>
                   <button onClick={() => handleDelete(mascota.ci_mascota)} className="btn-delete">
                     🗑️ Eliminar
                   </button>
@@ -438,6 +471,72 @@ const Mascotas = () => {
           })
         )}
       </div>
+
+      {vacunasVisibles && (
+        <div className="modal-overlay" onClick={() => { setVacunasVisibles(null); setVacunasLista([]) }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Vacunas de {vacunasVisibles.nombre_mascota}</h2>
+              <button className="btn-close" onClick={() => { setVacunasVisibles(null); setVacunasLista([]) }}>✕</button>
+            </div>
+            <div style={{ padding: 'var(--spacing-lg)' }}>
+              {alertasVacunas.length > 0 && (
+                <div className="reserva-card" style={{ marginBottom: 'var(--spacing-lg)' }}>
+                  <div className="reserva-body">
+                    <div className="reserva-detail full-width">
+                      <span className="icon">🔔</span>
+                      <div>
+                        <strong>Alertas de próximas vacunas (7 días):</strong>
+                        {alertasVacunas.map(av => (
+                          <p key={av.id_vacuna}>
+                            {av.nombre_vacuna || 'Vacuna'} programada para el {new Date(av.fecha_proxima).toLocaleDateString('es-ES')}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {vacunasLista.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">🧪</div>
+                  <p>No hay vacunas registradas</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: 'var(--spacing-md)' }}>
+                  {vacunasLista.map(v => (
+                    <div key={v.id_vacuna} className="reserva-card">
+                      <div className="reserva-body">
+                        <div className="reserva-detail">
+                          <span className="icon">💉</span>
+                          <div>
+                            <strong>Vacuna:</strong>
+                            <p>{v.nombre_vacuna || v.vacunacatalog?.tipo_vacuna || 'Vacuna'}</p>
+                          </div>
+                        </div>
+                        <div className="reserva-detail">
+                          <span className="icon">📅</span>
+                          <div>
+                            <strong>Aplicación:</strong>
+                            <p>{v.fecha_aplicacion ? new Date(v.fecha_aplicacion).toLocaleDateString('es-ES') : '-'}</p>
+                          </div>
+                        </div>
+                        <div className="reserva-detail">
+                          <span className="icon">🗓️</span>
+                          <div>
+                            <strong>Próxima:</strong>
+                            <p>{v.fecha_proxima ? new Date(v.fecha_proxima).toLocaleDateString('es-ES') : '-'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

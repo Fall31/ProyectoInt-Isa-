@@ -5,6 +5,7 @@ import './Reservas.css'
 
 const Reservas = () => {
   const [reservas, setReservas] = useState([])
+  const [alertasReservas, setAlertasReservas] = useState([])
   const [servicios, setServicios] = useState([])
   const [mascotas, setMascotas] = useState([])
   const [loading, setLoading] = useState(true)
@@ -65,7 +66,20 @@ const Reservas = () => {
             .eq('mascota.ci_cliente', clienteData.ci_cliente)
             .order('fecha_reserva', { ascending: false })
 
-          setReservas(reservasData || [])
+          const lista = reservasData || []
+          setReservas(lista)
+
+          // Alertas de reservas próximas: dentro de 24 horas
+          const ahora = Date.now()
+          const unDia = 24 * 60 * 60 * 1000
+          const proximas = lista
+            .map(r => {
+              const dt = combineDateTime(r.fecha_reserva, r.hora_reserva)
+              return { ...r, ts: dt ? dt.getTime() : null }
+            })
+            .filter(r => r.ts && r.ts > ahora && (r.ts - ahora) <= unDia)
+            .sort((a,b) => a.ts - b.ts)
+          setAlertasReservas(proximas)
         }
       }
 
@@ -198,7 +212,8 @@ const Reservas = () => {
 
     try {
       // Mensaje previo si es vacunación
-      const comentariosBase = formData.tipo_reserva === 'vacunacion'
+      const esVacunacion = formData.tipo_reserva === 'vacunacion'
+      const comentariosBase = esVacunacion
         ? `Solicitud de vacunación: el doctor evaluará si procede. ${formData.comentarios || ''}`
         : formData.comentarios || ''
 
@@ -208,7 +223,7 @@ const Reservas = () => {
         id_servicio: parseInt(formData.id_servicio),
         fecha_reserva: formData.fecha_reserva,
         hora_reserva: slotSeleccionado || formData.hora_reserva,
-        estado_reserva: 'pendiente',
+        estado_reserva: esVacunacion ? 'pendiente_revision' : 'pendiente',
         notificacion: true,
         comentarios: comentariosBase,
         tipo_reserva: formData.tipo_reserva
@@ -308,6 +323,24 @@ const Reservas = () => {
         </button>
       </div>
 
+      {alertasReservas.length > 0 && (
+        <div className="reserva-card" style={{ marginBottom: 'var(--spacing-lg)' }}>
+          <div className="reserva-body">
+            <div className="reserva-detail full-width">
+              <span className="icon">🔔</span>
+              <div>
+                <strong>Recordatorios (24 horas):</strong>
+                {alertasReservas.map(a => (
+                  <p key={a.id_reserva}>
+                    Cita {a.tipo_reserva} el {new Date(a.fecha_reserva).toLocaleDateString('es-ES')} a las {a.hora_reserva}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="reservas-list">
         {reservas.length === 0 ? (
           <div className="empty-state">
@@ -321,6 +354,10 @@ const Reservas = () => {
           reservas.map((r) => {
             const fechaReserva = new Date(r.fecha_reserva)
             const isPast = fechaReserva < new Date()
+            const estadoLabel = r.tipo_reserva === 'vacunacion' && r.estado_reserva === 'pendiente_revision'
+              ? 'pendiente revisión'
+              : r.estado_reserva
+            const estadoClase = estadoLabel.replace(' ', '_')
             
             return (
               <div key={r.id_reserva} className={`reserva-card ${isPast ? 'past' : ''}`}>
@@ -330,8 +367,8 @@ const Reservas = () => {
                     <h3>{r.mascota?.nombre_mascota || 'Mascota'}</h3>
                     <p className="reserva-especie">{r.mascota?.especie} • {r.mascota?.raza || 'Sin raza'}</p>
                   </div>
-                  <span className={`status-badge ${r.estado_reserva}`}>
-                    {r.estado_reserva}
+                  <span className={`status-badge ${estadoClase}`}>
+                    {estadoLabel}
                   </span>
                 </div>
                 
@@ -384,9 +421,18 @@ const Reservas = () => {
                       </div>
                     </div>
                   )}
+                  {r.tipo_reserva === 'vacunacion' && r.estado_reserva === 'pendiente_revision' && (
+                    <div className="reserva-detail full-width">
+                      <span className="icon">🧪</span>
+                      <div>
+                        <strong>Vacunación:</strong>
+                        <p>Tu solicitud está en revisión por el doctor. Te notificaremos qué doctor te atenderá.</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {r.estado_reserva === 'pendiente' && !isPast && (
+                {(r.estado_reserva === 'pendiente' || r.estado_reserva === 'pendiente_revision') && !isPast && (
                   <div className="reserva-actions">
                     <button 
                       className="btn-cancel"

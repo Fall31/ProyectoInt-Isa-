@@ -16,6 +16,8 @@ const Dashboard = ({ user }) => {
   })
   const [mascotas, setMascotas] = useState([])
   const [proximasReservas, setProximasReservas] = useState([])
+  const [alertasReservas, setAlertasReservas] = useState([])
+  const [alertasVacunas, setAlertasVacunas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -70,7 +72,18 @@ const Dashboard = ({ user }) => {
           .order('fecha_reserva', { ascending: true })
           .limit(3)
 
-        setProximasReservas(reservasData || [])
+        const listaReservas = reservasData || []
+        setProximasReservas(listaReservas)
+
+        // Recordatorios de reservas próximas (24h)
+        const ahora = Date.now()
+        const unDia = 24 * 60 * 60 * 1000
+        const toTs = (r) => new Date(`${r.fecha_reserva}T${r.hora_reserva || '00:00'}`).getTime()
+        const recordatorios = listaReservas
+          .map(r => ({ ...r, ts: toTs(r) }))
+          .filter(r => r.ts && r.ts > ahora && (r.ts - ahora) <= unDia)
+          .sort((a,b) => a.ts - b.ts)
+        setAlertasReservas(recordatorios)
 
         // Obtener última visita
         const { data: ultimaAtencion } = await supabase
@@ -89,6 +102,27 @@ const Dashboard = ({ user }) => {
             ? new Date(ultimaAtencion.fecha_atencion).toLocaleDateString('es-ES')
             : '-'
         })
+
+        // Alertas de vacunas próximas (7 días) para todas las mascotas
+        const ciMascotas = (mascotasData || []).map(m => m.ci_mascota)
+        let vacunasProximas = []
+        if (ciMascotas.length) {
+          for (const ci of ciMascotas) {
+            const dataVac = await supabase
+              .from('vacuna')
+              .select('id_vacuna, nombre_vacuna, fecha_proxima')
+              .eq('id_historial', ci)
+            const hoy = Date.now()
+            const siete = 7 * 24 * 60 * 60 * 1000
+            const avisos = (dataVac.data || [])
+              .filter(v => v.fecha_proxima)
+              .map(v => ({ ...v, ts: new Date(v.fecha_proxima).getTime(), ci_mascota: ci }))
+              .filter(v => v.ts > hoy && (v.ts - hoy) <= siete)
+            vacunasProximas = vacunasProximas.concat(avisos)
+          }
+          vacunasProximas.sort((a,b) => a.ts - b.ts)
+          setAlertasVacunas(vacunasProximas)
+        }
       }
 
       setLoading(false)
@@ -188,6 +222,44 @@ const Dashboard = ({ user }) => {
           </button>
         </div>
       </section>
+
+      {(alertasReservas.length > 0 || alertasVacunas.length > 0) && (
+        <section className="section">
+          <h2>🔔 Recordatorios</h2>
+          {alertasReservas.length > 0 && (
+            <div className="reserva-card" style={{ marginBottom: 'var(--spacing-lg)' }}>
+              <div className="reserva-body">
+                <div className="reserva-detail full-width">
+                  <span className="icon">📅</span>
+                  <div>
+                    <strong>Reservas en las próximas 24 horas:</strong>
+                    {alertasReservas.map(a => (
+                      <p key={a.id_reserva}>Cita {a.tipo_reserva} el {new Date(a.fecha_reserva).toLocaleDateString('es-ES')} a las {a.hora_reserva}</p>
+                    ))}
+                    <button className="btn-primary" onClick={() => navigate('/reservas')}>Ver reservas</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {alertasVacunas.length > 0 && (
+            <div className="reserva-card">
+              <div className="reserva-body">
+                <div className="reserva-detail full-width">
+                  <span className="icon">💉</span>
+                  <div>
+                    <strong>Vacunas próximas (7 días):</strong>
+                    {alertasVacunas.map(v => (
+                      <p key={v.id_vacuna}>{v.nombre_vacuna || 'Vacuna'} programada para el {new Date(v.fecha_proxima).toLocaleDateString('es-ES')}</p>
+                    ))}
+                    <button className="btn-primary" onClick={() => navigate('/mascotas')}>Ver vacunas</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="dashboard-grid">
         <section className="section mascotas-section">
